@@ -75,7 +75,38 @@
                     
                     <!-- Canvas for Camera Image -->
                     <div class="camera-display">
-                        <canvas id="cameraCanvas" width="800" height="600"></canvas>
+                        <div style="position: relative;">
+                            <canvas id="cameraCanvas" width="800" height="600"></canvas>
+                            <!-- Tooltip -->
+                            <div id="cameraTooltip" class="camera-tooltip" style="display: none;">
+                                <div class="tooltip-row">
+                                    <span class="tooltip-label">Module ID:</span>
+                                    <span class="tooltip-value" id="tooltipModuleId">-</span>
+                                </div>
+                                <div class="tooltip-row">
+                                    <span class="tooltip-label">Backplane:</span>
+                                    <span class="tooltip-value" id="tooltipBackplane">-</span>
+                                </div>
+                                <div class="tooltip-row">
+                                    <span class="tooltip-label">Temperature:</span>
+                                    <span class="tooltip-value" id="tooltipTemp">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Temperature Scale Legend -->
+                        <div class="temp-scale-container">
+                            <div class="temp-scale-label">Temperature Scale:</div>
+                            <div class="temp-scale">
+                                <canvas id="tempScaleCanvas" width="300" height="30"></canvas>
+                                <div class="temp-scale-labels">
+                                    <span id="tempMin">10°C</span>
+                                    <span id="tempMid">20°C</span>
+                                    <span id="tempMax">30°C</span>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="camera-controls">
                             <button class="simulation-mode" id="simulationBtn" onclick="toggleSimulation()">Enable Simulation</button>
                             <button onclick="updateCameraDisplay()">Refresh</button>
@@ -95,7 +126,7 @@
                             </label>
                         </div>
                         <div class="camera-info">
-                            <span id="pixelInfo">Hover over canvas for pixel values</span>
+                            <span id="pixelInfo">Hover over modules for detailed information</span>
                         </div>
                     </div>
 
