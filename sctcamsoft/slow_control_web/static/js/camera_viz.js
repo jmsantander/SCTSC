@@ -36,9 +36,9 @@ class CameraVisualization {
         this.modulesPerRow = 5;
         this.totalModules = 225;
         
-        // Visual parameters
-        this.moduleSize = 48;
-        this.backplaneGap = 12;
+        // Visual parameters - INCREASED MODULE SIZE FOR LARGER DISPLAY
+        this.moduleSize = 64;  // Increased from 48 to 64 (25% larger)
+        this.backplaneGap = 16;  // Increased proportionally
         this.gridLineWidth = 1;
         this.backplaneLineWidth = 3;
         
