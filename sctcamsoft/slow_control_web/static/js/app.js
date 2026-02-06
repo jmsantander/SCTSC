@@ -2,11 +2,12 @@
  * Main Application Script
  * 
  * Handles tab navigation and coordinates between camera visualization
- * and monitoring displays. Camera stays in place and switches data types.
+ * and monitoring displays. Camera display moves between tabs.
  */
 
 let socket;
 let currentTab = 'system';
+let cameraDisplayElement = null;
 
 /**
  * Initialize application
@@ -14,6 +15,9 @@ let currentTab = 'system';
 function initApp() {
     // Initialize WebSocket connection
     initWebSocket();
+    
+    // Cache camera display element
+    cameraDisplayElement = document.querySelector('.camera-display');
     
     // Show default tab
     showTab('system');
@@ -45,7 +49,7 @@ function initWebSocket() {
 }
 
 /**
- * Show a specific tab and update camera data type if needed
+ * Show a specific tab and move camera display if needed
  * 
  * @param {string} tabName - Tab identifier
  */
@@ -86,6 +90,25 @@ function showTab(tabName) {
         // Initialize camera on first access to a camera tab
         if (typeof initCameraVisualization === 'function' && !window.cameraInitialized) {
             initCameraVisualization();
+        }
+        
+        // Get camera display element if not already cached
+        if (!cameraDisplayElement) {
+            cameraDisplayElement = document.querySelector('.camera-display');
+        }
+        
+        // Move camera display to current tab
+        if (cameraDisplayElement && selectedTab) {
+            const targetContainer = selectedTab.querySelector('.visualization-container');
+            if (targetContainer && !targetContainer.contains(cameraDisplayElement)) {
+                // Insert after the h2 element
+                const h2 = targetContainer.querySelector('h2');
+                if (h2) {
+                    h2.parentNode.insertBefore(cameraDisplayElement, h2.nextSibling);
+                } else {
+                    targetContainer.insertBefore(cameraDisplayElement, targetContainer.firstChild);
+                }
+            }
         }
         
         // Update camera visualization data type
