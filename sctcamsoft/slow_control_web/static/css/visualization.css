@@ -1,7 +1,7 @@
 /**
  * Visualization Styles
  * Styles for camera display, module grid, and monitoring charts
- * Updated for 9 backplane (3x3) camera structure
+ * Updated for 9 backplane (3x3) camera structure with tooltip and scale
  */
 
 /* Camera Display */
@@ -31,6 +31,79 @@
     image-rendering: pixelated;  /* Crisp pixel rendering */
     image-rendering: -moz-crisp-edges;
     image-rendering: crisp-edges;
+}
+
+/* Tooltip */
+.camera-tooltip {
+    position: absolute;
+    background: rgba(30, 30, 30, 0.95);
+    border: 2px solid #4ecdc4;
+    border-radius: 6px;
+    padding: 10px 14px;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-width: 180px;
+}
+
+.tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 4px 0;
+    font-size: 13px;
+}
+
+.tooltip-label {
+    color: #aaa;
+    font-weight: 500;
+    margin-right: 12px;
+}
+
+.tooltip-value {
+    color: #4ecdc4;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+}
+
+/* Temperature Scale Legend */
+.temp-scale-container {
+    margin: 20px auto;
+    padding: 15px;
+    background: #1a1a1a;
+    border-radius: 6px;
+    max-width: 600px;
+    border: 1px solid #444;
+}
+
+.temp-scale-label {
+    color: #e0e0e0;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.temp-scale {
+    position: relative;
+}
+
+#tempScaleCanvas {
+    display: block;
+    width: 100%;
+    height: 30px;
+    border-radius: 4px;
+    border: 1px solid #555;
+}
+
+.temp-scale-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    color: #4ecdc4;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
 }
 
 .camera-controls {
@@ -312,6 +385,16 @@
         margin-left: 0;
         margin-top: 8px;
     }
+    
+    .camera-tooltip {
+        font-size: 12px;
+        min-width: 160px;
+        padding: 8px 12px;
+    }
+    
+    .temp-scale-container {
+        max-width: 100%;
+    }
 }
 
 /* Animation for data updates */
@@ -328,24 +411,4 @@
 
 .updating {
     animation: pulse 1s ease-in-out infinite;
-}
-
-/* Color scale legend (optional enhancement) */
-.color-legend {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 10px;
-    padding: 10px;
-    background: #1a1a1a;
-    border-radius: 4px;
-    font-size: 12px;
-    color: #e0e0e0;
-}
-
-.legend-gradient {
-    flex: 1;
-    height: 20px;
-    border-radius: 4px;
-    background: linear-gradient(to right, #000, #f00, #ff0, #fff);
 }
