@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PsctRunControlMainWindow</class>
+ <widget class="QMainWindow" name="PsctRunControlMainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1069</width>
+    <height>887</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>SCT Run Control</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout" columnstretch="2,0,0">
+    <item row="0" column="2">
+     <widget class="LED" name="connected_led" native="true"/>
+    </item>
+    <item row="23" column="0" colspan="3">
+     <widget class="QTextBrowser" name="log_textbrowser">
+      <property name="verticalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOn</enum>
+      </property>
+     </widget>
+    </item>
+    <item row="21" column="0">
+     <widget class="QLabel" name="label_4">
+      <property name="text">
+       <string>Messages</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="0">
+     <layout class="QHBoxLayout" name="config_file_widgets">
+      <item>
+       <widget class="QPushButton" name="load_config_button">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>116</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <kerning>false</kerning>
+         </font>
+        </property>
+        <property name="text">
+         <string>Load Config</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="config_path_dropdown"/>
+      </item>
+     </layout>
+    </item>
+    <item row="1" column="0" rowspan="7">
+     <widget class="QTextBrowser" name="config_textbrowser">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="verticalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOn</enum>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1" colspan="2">
+     <widget class="QPushButton" name="apply_button">
+      <property name="text">
+       <string>Apply Config</string>
+      </property>
+      <property name="checkable">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="1" colspan="2">
+     <widget class="QPushButton" name="initialize_button">
+      <property name="text">
+       <string>Initialize</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <widget class="QLabel" name="label">
+      <property name="text">
+       <string>Connected</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="1" colspan="2">
+     <widget class="QPushButton" name="shutdown_button">
+      <property name="text">
+       <string>Shutdown</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="1">
+     <widget class="QLabel" name="apply_status_textbox">
+      <property name="text">
+       <string>NOT APPLIED</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+      </property>
+      <property name="margin">
+       <number>0</number>
+      </property>
+      <property name="indent">
+       <number>10</number>
+      </property>
+     </widget>
+    </item>
+    <item row="19" column="0" rowspan="2">
+     <layout class="QGridLayout" name="run_widgets">
+      <item row="2" column="1" colspan="4">
+       <widget class="QProgressBar" name="run_progress_bar">
+        <property name="value">
+         <number>24</number>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="5">
+       <widget class="QLabel" name="remaining_time_textbox">
+        <property name="maximumSize">
+         <size>
+          <width>29</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>--/--</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="elapsed_time_textbox">
+        <property name="maximumSize">
+         <size>
+          <width>29</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>--/--</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="4">
+       <widget class="QPushButton" name="stop_run_button">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="font">
+         <font>
+          <weight>50</weight>
+          <italic>false</italic>
+          <bold>false</bold>
+          <underline>false</underline>
+          <strikeout>false</strikeout>
+          <kerning>false</kerning>
+         </font>
+        </property>
+        <property name="autoFillBackground">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Stop Run</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="3">
+       <widget class="QPushButton" name="add_comments">
+        <property name="text">
+         <string>Add Comments</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QPushButton" name="start_run_button">
+        <property name="text">
+         <string>Start Run</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QPushButton" name="define_run">
+        <property name="text">
+         <string>Define Run</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>Elapsed:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>Remaining:</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="10" column="0">
+     <widget class="QTableWidget" name="tableWidget">
+      <property name="rowCount">
+       <number>1</number>
+      </property>
+      <property name="columnCount">
+       <number>6</number>
+      </property>
+      <attribute name="horizontalHeaderVisible">
+       <bool>false</bool>
+      </attribute>
+      <attribute name="verticalHeaderVisible">
+       <bool>true</bool>
+      </attribute>
+      <row/>
+      <column/>
+      <column/>
+      <column/>
+      <column/>
+      <column/>
+      <column/>
+      <item row="0" column="0">
+       <property name="text">
+        <string>Status</string>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="flags">
+        <set>ItemIsDragEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
+       </property>
+      </item>
+      <item row="0" column="1">
+       <property name="text">
+        <string>Run ID</string>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="flags">
+        <set>ItemIsDragEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
+       </property>
+      </item>
+      <item row="0" column="2">
+       <property name="text">
+        <string>Source</string>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="flags">
+        <set>ItemIsDragEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
+       </property>
+      </item>
+      <item row="0" column="3">
+       <property name="text">
+        <string>Weather</string>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="flags">
+        <set>ItemIsDragEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
+       </property>
+      </item>
+      <item row="0" column="4">
+       <property name="text">
+        <string>Duration</string>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="flags">
+        <set>ItemIsDragEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
+       </property>
+      </item>
+      <item row="0" column="5">
+       <property name="text">
+        <string>Run type</string>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="flags">
+        <set>ItemIsDragEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
+       </property>
+      </item>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1069</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="action_mod_config"/>
+    <addaction name="action_diagnostic_view"/>
+   </widget>
+   <addaction name="menuTools"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionConfigure_Modules">
+   <property name="text">
+    <string>Configure Modules</string>
+   </property>
+  </action>
+  <action name="actionSend_Single_Command">
+   <property name="text">
+    <string>Send Single Command</string>
+   </property>
+  </action>
+  <action name="action_new_conf">
+   <property name="text">
+    <string>New Configuration</string>
+   </property>
+  </action>
+  <action name="action_open_conf">
+   <property name="text">
+    <string>Open</string>
+   </property>
+  </action>
+  <action name="action_save_conf">
+   <property name="text">
+    <string>Save</string>
+   </property>
+  </action>
+  <action name="action_save_conf_as">
+   <property name="text">
+    <string>Save As</string>
+   </property>
+  </action>
+  <action name="actionTriggerConf">
+   <property name="text">
+    <string>Trigger Configuration</string>
+   </property>
+  </action>
+  <action name="actionModule_Config">
+   <property name="text">
+    <string>Module Configuration</string>
+   </property>
+  </action>
+  <action name="action_mod_config">
+   <property name="text">
+    <string>Module Configuration</string>
+   </property>
+  </action>
+  <action name="action_diagnostic_view">
+   <property name="text">
+    <string>Diagnostic View</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>LED</class>
+   <extends>QWidget</extends>
+   <header>sctcamsoft.lib_gui.led</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

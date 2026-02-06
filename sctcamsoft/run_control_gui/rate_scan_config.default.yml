@@ -1,0 +1,17 @@
+run_type: rate_scan
+module_ids: [
+  1, 2, 3, 4, 6, 
+  9, 100, 106, 107, 108,
+  111, 112, 114, 115, 119, 
+  121, 123, 124, 125, 126, 
+]
+trigger_module_ids: [115, 123, 124]
+hv_on: True
+
+pe_thresholds_bounds: [700, 0] # range() start and stop
+pe_thresholds_step: -25 # range step
+desired_rate: 10 # In Hz
+
+read_temperatures: True
+read_currents: True
+add_bias: 0 # mV

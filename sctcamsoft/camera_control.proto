@@ -1,0 +1,33 @@
+// Recompile with the command:
+// protoc -I=. --python_out=. ./camera_control.proto
+
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package camera_control;
+
+message UserCommand {
+    string command = 1;
+    map<string, string> args = 2;
+}
+
+message UserUpdate {
+    
+    message Update {
+        
+        message Value {
+            
+            string id = 1;
+            string value = 2;
+        }
+
+        string device = 1;
+        string variable = 2;
+        string unit = 3;
+        google.protobuf.Timestamp timestamp = 4;
+        repeated Value values = 5;
+    }
+   
+    repeated Update updates = 1;
+}
