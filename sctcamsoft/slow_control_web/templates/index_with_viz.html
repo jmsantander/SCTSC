@@ -68,12 +68,16 @@
             <!-- NEW: Camera Visualization Tab -->
             <div id="camera-tab" class="tab-content">
                 <div class="visualization-container">
-                    <h2>Camera Module Display</h2>
+                    <h2>
+                        Camera Module Display
+                        <span id="simulationIndicator" class="simulation-indicator" style="display: none;">SIMULATION MODE</span>
+                    </h2>
                     
                     <!-- Canvas for Camera Image -->
                     <div class="camera-display">
                         <canvas id="cameraCanvas" width="800" height="600"></canvas>
                         <div class="camera-controls">
+                            <button class="simulation-mode" id="simulationBtn" onclick="toggleSimulation()">Enable Simulation</button>
                             <button onclick="updateCameraDisplay()">Refresh</button>
                             <label>
                                 Color Scale:
@@ -105,7 +109,15 @@
             <!-- NEW: Monitoring Tab with Charts -->
             <div id="monitoring-tab" class="tab-content">
                 <div class="monitoring-container">
-                    <h2>Real-Time Monitoring</h2>
+                    <h2>
+                        Real-Time Monitoring
+                        <span id="monitoringSimIndicator" class="simulation-indicator" style="display: none;">SIMULATION MODE</span>
+                    </h2>
+                    
+                    <!-- Add simulation button for monitoring too -->
+                    <div class="camera-controls" style="margin-bottom: 20px;">
+                        <button class="simulation-mode" id="monitoringSimBtn" onclick="toggleMonitoringSimulation()">Enable Simulation</button>
+                    </div>
                     
                     <!-- Gauge Charts -->
                     <div class="gauge-grid">
