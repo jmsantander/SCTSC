@@ -1,15 +1,16 @@
 /**
  * Camera Visualization Module
- * Handles Canvas-based camera display with color scales and module views
- * Now includes simulation mode for testing without hardware
+ * Handles Canvas-based camera display with proper SCT structure:
+ * - 9 backplanes arranged in 3x3 matrix
+ * - 25 modules per backplane (5x5 matrix)
+ * - Total: 225 modules
+ * - Realistic temperature simulation
  */
 
 class CameraVisualization {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext('2d');
-        this.width = this.canvas.width;
-        this.height = this.canvas.height;
         this.colorScale = 'grayscale';
         this.currentModule = 0;
         this.imageData = null;
@@ -17,59 +18,236 @@ class CameraVisualization {
         this.simulationInterval = null;
         this.simulationTime = 0;
         
+        // SCT Camera structure
+        this.numBackplanes = 9;  // 3x3 arrangement
+        this.backplanesPerRow = 3;
+        this.modulesPerBackplane = 25;  // 5x5 arrangement
+        this.modulesPerRow = 5;
+        this.totalModules = 225;
+        
+        // Visual parameters
+        this.moduleSize = 48;  // pixels per module
+        this.backplaneGap = 12;  // gap between backplanes
+        this.gridLineWidth = 1;  // module grid lines
+        this.backplaneLineWidth = 3;  // backplane separation lines
+        
+        // Temperature simulation parameters
+        this.baseTemp = 20;  // Base temperature in Celsius
+        this.tempVariation = 10;  // Temperature variation range
+        this.temperatures = new Array(this.totalModules).fill(this.baseTemp);
+        
+        this.setupCanvas();
         this.setupEventListeners();
     }
 
+    setupCanvas() {
+        // Calculate canvas size
+        const modulesAcross = this.modulesPerRow * this.backplanesPerRow;
+        const gapsAcross = this.backplanesPerRow - 1;
+        this.canvas.width = modulesAcross * this.moduleSize + gapsAcross * this.backplaneGap;
+        this.canvas.height = this.canvas.width;  // Square camera
+        
+        this.width = this.canvas.width;
+        this.height = this.canvas.height;
+    }
+
     setupEventListeners() {
-        // Mouse hover for pixel info
+        // Mouse hover for module info
         this.canvas.addEventListener('mousemove', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             const x = Math.floor((e.clientX - rect.left) * this.canvas.width / rect.width);
             const y = Math.floor((e.clientY - rect.top) * this.canvas.height / rect.height);
-            this.showPixelInfo(x, y);
+            this.showModuleInfo(x, y);
+        });
+        
+        // Click to select module
+        this.canvas.addEventListener('click', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) * this.canvas.width / rect.width);
+            const y = Math.floor((e.clientY - rect.top) * this.canvas.height / rect.height);
+            const moduleId = this.getModuleAtPosition(x, y);
+            if (moduleId >= 0) {
+                this.selectModule(moduleId);
+            }
         });
     }
 
     /**
-     * Update camera display with new image data
-     * @param {Uint8Array|Array} data - Image pixel data
-     * @param {number} width - Image width
-     * @param {number} height - Image height
+     * Get module ID from canvas position
      */
-    updateImage(data, width, height) {
-        // Resize canvas if needed
-        if (this.canvas.width !== width || this.canvas.height !== height) {
-            this.canvas.width = width;
-            this.canvas.height = height;
-            this.width = width;
-            this.height = height;
+    getModuleAtPosition(x, y) {
+        const sizeWithGap = this.modulesPerRow * this.moduleSize + this.backplaneGap;
+        
+        // Which backplane (3x3)
+        const bpCol = Math.floor(x / sizeWithGap);
+        const bpRow = Math.floor(y / sizeWithGap);
+        
+        if (bpCol >= this.backplanesPerRow || bpRow >= this.backplanesPerRow) {
+            return -1;  // In gap
         }
+        
+        // Position within backplane
+        const xInBp = x - bpCol * sizeWithGap;
+        const yInBp = y - bpRow * sizeWithGap;
+        
+        // Check if in gap
+        if (xInBp >= this.modulesPerRow * this.moduleSize || 
+            yInBp >= this.modulesPerRow * this.moduleSize) {
+            return -1;
+        }
+        
+        // Which module within backplane (5x5)
+        const modCol = Math.floor(xInBp / this.moduleSize);
+        const modRow = Math.floor(yInBp / this.moduleSize);
+        
+        const backplaneId = bpRow * this.backplanesPerRow + bpCol;
+        const moduleInBp = modRow * this.modulesPerRow + modCol;
+        
+        return backplaneId * this.modulesPerBackplane + moduleInBp;
+    }
 
-        // Store raw data
-        this.imageData = data;
+    /**
+     * Get canvas position for a module
+     */
+    getModulePosition(moduleId) {
+        const backplaneId = Math.floor(moduleId / this.modulesPerBackplane);
+        const moduleInBp = moduleId % this.modulesPerBackplane;
         
-        // Create ImageData object
-        const imgData = this.ctx.createImageData(width, height);
+        const bpRow = Math.floor(backplaneId / this.backplanesPerRow);
+        const bpCol = backplaneId % this.backplanesPerRow;
         
-        // Apply color scale
-        for (let i = 0; i < data.length; i++) {
-            const value = data[i];
+        const modRow = Math.floor(moduleInBp / this.modulesPerRow);
+        const modCol = moduleInBp % this.modulesPerRow;
+        
+        const sizeWithGap = this.modulesPerRow * this.moduleSize + this.backplaneGap;
+        
+        const x = bpCol * sizeWithGap + modCol * this.moduleSize;
+        const y = bpRow * sizeWithGap + modRow * this.moduleSize;
+        
+        return { x, y, backplaneId, bpRow, bpCol, modRow, modCol };
+    }
+
+    /**
+     * Draw the entire camera with temperature data
+     */
+    drawCamera() {
+        // Clear canvas
+        this.ctx.fillStyle = '#1a1a1a';
+        this.ctx.fillRect(0, 0, this.width, this.height);
+        
+        // Draw all modules with their temperatures
+        for (let i = 0; i < this.totalModules; i++) {
+            const pos = this.getModulePosition(i);
+            const temp = this.temperatures[i];
+            
+            // Map temperature to 0-255 range for colormap
+            const minTemp = this.baseTemp - this.tempVariation;
+            const maxTemp = this.baseTemp + this.tempVariation;
+            const normalized = (temp - minTemp) / (maxTemp - minTemp);
+            const value = Math.floor(Math.max(0, Math.min(1, normalized)) * 255);
+            
+            // Get color
             const color = this.applyColorScale(value);
-            const idx = i * 4;
-            imgData.data[idx] = color.r;
-            imgData.data[idx + 1] = color.g;
-            imgData.data[idx + 2] = color.b;
-            imgData.data[idx + 3] = 255; // Alpha
+            this.ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+            this.ctx.fillRect(pos.x, pos.y, this.moduleSize, this.moduleSize);
         }
         
-        // Draw to canvas
-        this.ctx.putImageData(imgData, 0, 0);
+        // Draw grid lines between modules
+        this.drawGrid();
+        
+        // Highlight selected module
+        this.highlightModule(this.currentModule);
+    }
+
+    /**
+     * Draw grid lines
+     */
+    drawGrid() {
+        this.ctx.strokeStyle = '#666';
+        this.ctx.lineWidth = this.gridLineWidth;
+        
+        const sizeWithGap = this.modulesPerRow * this.moduleSize + this.backplaneGap;
+        
+        // Draw module grid lines within each backplane
+        for (let bpRow = 0; bpRow < this.backplanesPerRow; bpRow++) {
+            for (let bpCol = 0; bpCol < this.backplanesPerRow; bpCol++) {
+                const bpX = bpCol * sizeWithGap;
+                const bpY = bpRow * sizeWithGap;
+                const bpSize = this.modulesPerRow * this.moduleSize;
+                
+                // Vertical lines
+                for (let i = 1; i < this.modulesPerRow; i++) {
+                    const x = bpX + i * this.moduleSize;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, bpY);
+                    this.ctx.lineTo(x, bpY + bpSize);
+                    this.ctx.stroke();
+                }
+                
+                // Horizontal lines
+                for (let i = 1; i < this.modulesPerRow; i++) {
+                    const y = bpY + i * this.moduleSize;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(bpX, y);
+                    this.ctx.lineTo(bpX + bpSize, y);
+                    this.ctx.stroke();
+                }
+            }
+        }
+        
+        // Draw thick lines around backplanes
+        this.ctx.strokeStyle = '#4ecdc4';
+        this.ctx.lineWidth = this.backplaneLineWidth;
+        
+        for (let bpRow = 0; bpRow < this.backplanesPerRow; bpRow++) {
+            for (let bpCol = 0; bpCol < this.backplanesPerRow; bpCol++) {
+                const x = bpCol * sizeWithGap;
+                const y = bpRow * sizeWithGap;
+                const size = this.modulesPerRow * this.moduleSize;
+                
+                this.ctx.strokeRect(x, y, size, size);
+            }
+        }
+    }
+
+    /**
+     * Highlight selected module
+     */
+    highlightModule(moduleId) {
+        if (moduleId < 0 || moduleId >= this.totalModules) return;
+        
+        const pos = this.getModulePosition(moduleId);
+        
+        // Draw highlight border
+        this.ctx.strokeStyle = '#ffe66d';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeRect(pos.x + 2, pos.y + 2, this.moduleSize - 4, this.moduleSize - 4);
+    }
+
+    /**
+     * Show module information on hover
+     */
+    showModuleInfo(x, y) {
+        const moduleId = this.getModuleAtPosition(x, y);
+        
+        const infoElement = document.getElementById('pixelInfo');
+        if (!infoElement) return;
+        
+        if (moduleId >= 0 && moduleId < this.totalModules) {
+            const pos = this.getModulePosition(moduleId);
+            const temp = this.temperatures[moduleId];
+            
+            infoElement.textContent = `Module ${moduleId} | ` +
+                `Backplane ${pos.backplaneId} (${pos.bpRow},${pos.bpCol}) | ` +
+                `Position (${pos.modRow},${pos.modCol}) | ` +
+                `Temp: ${temp.toFixed(2)}°C`;
+        } else {
+            infoElement.textContent = 'Hover over modules for information';
+        }
     }
 
     /**
      * Apply color scale to value
-     * @param {number} value - Pixel value (0-255)
-     * @returns {Object} RGB color object
      */
     applyColorScale(value) {
         const normalized = value / 255;
@@ -79,7 +257,6 @@ class CameraVisualization {
                 return { r: value, g: value, b: value };
             
             case 'hot':
-                // Hot colormap (black -> red -> yellow -> white)
                 if (normalized < 0.33) {
                     const t = normalized / 0.33;
                     return { r: Math.floor(255 * t), g: 0, b: 0 };
@@ -92,7 +269,6 @@ class CameraVisualization {
                 }
             
             case 'viridis':
-                // Simplified viridis colormap
                 const r = Math.floor(255 * (0.267 + 0.529 * normalized - 0.796 * normalized * normalized));
                 const g = Math.floor(255 * (-0.138 + 1.472 * normalized - 0.334 * normalized * normalized));
                 const b = Math.floor(255 * (0.329 - 0.196 * normalized + 0.867 * normalized * normalized));
@@ -106,99 +282,28 @@ class CameraVisualization {
     }
 
     /**
-     * Show pixel value information
-     * @param {number} x - X coordinate
-     * @param {number} y - Y coordinate
-     */
-    showPixelInfo(x, y) {
-        if (!this.imageData || x < 0 || y < 0 || x >= this.width || y >= this.height) {
-            return;
-        }
-        
-        const idx = y * this.width + x;
-        const value = this.imageData[idx];
-        
-        const infoElement = document.getElementById('pixelInfo');
-        if (infoElement) {
-            infoElement.textContent = `Pixel (${x}, ${y}): ${value}`;
-        }
-    }
-
-    /**
      * Set color scale
-     * @param {string} scale - Color scale name
      */
     setColorScale(scale) {
         this.colorScale = scale;
-        // Redraw with new color scale
-        if (this.imageData) {
-            this.updateImage(this.imageData, this.width, this.height);
-        }
+        this.drawCamera();
     }
 
     /**
-     * Draw hexagonal module layout
-     * @param {Array} modules - Array of module objects with {id, x, y, status}
-     */
-    drawModuleLayout(modules) {
-        const moduleGrid = document.getElementById('moduleGrid');
-        if (!moduleGrid) return;
-        
-        moduleGrid.innerHTML = '';
-        
-        modules.forEach(module => {
-            const hexagon = this.createHexagon(module);
-            moduleGrid.appendChild(hexagon);
-        });
-    }
-
-    /**
-     * Create hexagonal module element
-     * @param {Object} module - Module data
-     * @returns {HTMLElement} Hexagon element
-     */
-    createHexagon(module) {
-        const hex = document.createElement('div');
-        hex.className = `module-hexagon ${module.status}`;
-        hex.dataset.moduleId = module.id;
-        hex.style.gridColumn = module.x;
-        hex.style.gridRow = module.y;
-        
-        hex.innerHTML = `
-            <div class="hex-content">
-                <div class="module-id">${module.id}</div>
-                <div class="module-status-text">${module.status}</div>
-            </div>
-        `;
-        
-        hex.onclick = () => this.selectModule(module.id);
-        
-        return hex;
-    }
-
-    /**
-     * Select a module to display
-     * @param {number} moduleId - Module ID
+     * Select a module
      */
     selectModule(moduleId) {
-        this.currentModule = moduleId;
-        console.log(`Selected module: ${moduleId}`);
+        if (moduleId < 0 || moduleId >= this.totalModules) return;
         
-        if (this.simulationMode) {
-            // Generate simulation data immediately
-            const data = this.generateSimulationData();
-            this.updateImage(data, this.width, this.height);
-        } else {
-            // Request module data from server
-            fetch(`/api/camera/module/${moduleId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.image) {
-                        this.updateImage(data.image, data.width, data.height);
-                    }
-                })
-                .catch(error => console.error('Error loading module data:', error));
+        this.currentModule = moduleId;
+        
+        // Update selector
+        const select = document.getElementById('moduleSelect');
+        if (select) {
+            select.value = moduleId;
         }
+        
+        this.drawCamera();
     }
 
     /**
@@ -224,19 +329,19 @@ class CameraVisualization {
     }
 
     /**
-     * Start simulation mode
+     * Start simulation
      */
     startSimulation() {
         this.simulationTime = 0;
         this.simulationInterval = setInterval(() => {
-            this.simulationTime += 0.1;
-            const data = this.generateSimulationData();
-            this.updateImage(data, this.width, this.height);
-        }, 100); // Update 10 times per second
+            this.simulationTime += 0.05;
+            this.updateSimulation();
+            this.drawCamera();
+        }, 50); // 20 FPS
     }
 
     /**
-     * Stop simulation mode
+     * Stop simulation
      */
     stopSimulation() {
         if (this.simulationInterval) {
@@ -246,92 +351,77 @@ class CameraVisualization {
     }
 
     /**
-     * Generate animated simulation data
-     * @returns {Uint8Array} Simulated pixel data
+     * Update temperature simulation
+     * Creates realistic temperature patterns with:
+     * - Spatial correlation (nearby modules have similar temps)
+     * - Temporal variation (slow changes)
+     * - Random noise
+     * - Hotspots on some backplanes
      */
-    generateSimulationData() {
-        const data = new Uint8Array(this.width * this.height);
-        
-        for (let y = 0; y < this.height; y++) {
-            for (let x = 0; x < this.width; x++) {
-                const idx = y * this.width + x;
-                
-                // Normalized coordinates (-1 to 1)
-                const nx = (x / this.width) * 2 - 1;
-                const ny = (y / this.height) * 2 - 1;
-                
-                // Different patterns based on module
-                let value;
-                switch (this.currentModule % 4) {
-                    case 0:
-                        // Animated radial waves
-                        const r = Math.sqrt(nx * nx + ny * ny);
-                        value = (Math.sin(r * 10 - this.simulationTime * 5) + 1) * 0.5;
-                        break;
-                    
-                    case 1:
-                        // Moving interference pattern
-                        value = (Math.sin(nx * 8 + this.simulationTime) * 
-                                Math.cos(ny * 8 + this.simulationTime) + 1) * 0.5;
-                        break;
-                    
-                    case 2:
-                        // Rotating spiral
-                        const angle = Math.atan2(ny, nx);
-                        const radius = Math.sqrt(nx * nx + ny * ny);
-                        value = (Math.sin(angle * 5 + radius * 10 - this.simulationTime * 3) + 1) * 0.5;
-                        break;
-                    
-                    case 3:
-                        // Plasma effect
-                        value = (Math.sin(nx * 5 + this.simulationTime) +
-                                Math.sin(ny * 6 + this.simulationTime * 1.3) +
-                                Math.sin((nx + ny) * 4 + this.simulationTime * 0.8) +
-                                Math.sin(Math.sqrt(nx * nx + ny * ny) * 8 + this.simulationTime * 2)) / 4 * 0.5 + 0.5;
-                        break;
-                    
-                    default:
-                        value = 0.5;
-                }
-                
-                // Add some noise
-                value += (Math.random() - 0.5) * 0.1;
-                
-                // Clamp and convert to 0-255
-                data[idx] = Math.floor(Math.max(0, Math.min(1, value)) * 255);
+    updateSimulation() {
+        for (let i = 0; i < this.totalModules; i++) {
+            const pos = this.getModulePosition(i);
+            
+            // Normalized positions (0-1)
+            const nx = (pos.bpCol * this.modulesPerRow + pos.modCol) / (this.modulesPerRow * this.backplanesPerRow);
+            const ny = (pos.bpRow * this.modulesPerRow + pos.modRow) / (this.modulesPerRow * this.backplanesPerRow);
+            
+            // Base temperature with gradient
+            let temp = this.baseTemp;
+            
+            // Add spatial patterns
+            temp += Math.sin(nx * Math.PI * 2 + this.simulationTime) * 3;
+            temp += Math.cos(ny * Math.PI * 2 + this.simulationTime * 0.7) * 2;
+            
+            // Hotspot on specific backplanes
+            const hotBackplanes = [1, 4, 7];  // Some backplanes run hotter
+            if (hotBackplanes.includes(pos.backplaneId)) {
+                // Hotspot in center of backplane
+                const dx = pos.modCol - 2;  // Distance from center
+                const dy = pos.modRow - 2;
+                const distFromCenter = Math.sqrt(dx * dx + dy * dy);
+                temp += (2.5 - distFromCenter) * 2;
             }
+            
+            // Edge cooling effect
+            if (pos.bpCol === 0 || pos.bpCol === 2 || pos.bpRow === 0 || pos.bpRow === 2) {
+                temp -= 1.5;
+            }
+            
+            // Add some noise
+            temp += (Math.random() - 0.5) * 0.5;
+            
+            // Smooth transition
+            this.temperatures[i] = this.temperatures[i] * 0.9 + temp * 0.1;
         }
-        
-        return data;
     }
 }
 
-// Initialize camera visualization
+// Global instance
 let cameraViz;
 
 function initCameraVisualization() {
     cameraViz = new CameraVisualization('cameraCanvas');
-    
-    // Populate module selector
     populateModuleSelector();
     
-    // Set up periodic updates (only when not in simulation mode)
-    setInterval(() => {
-        if (!cameraViz.simulationMode) {
-            updateCameraDisplay();
-        }
-    }, 1000);
+    // Initial draw
+    cameraViz.drawCamera();
 }
 
 function populateModuleSelector() {
     const select = document.getElementById('moduleSelect');
     if (!select) return;
     
-    // Example: 11 modules for SCT camera
-    for (let i = 0; i < 11; i++) {
+    select.innerHTML = '';
+    
+    // Add all 225 modules
+    for (let i = 0; i < 225; i++) {
+        const backplane = Math.floor(i / 25);
+        const moduleInBp = i % 25;
+        
         const option = document.createElement('option');
         option.value = i;
-        option.textContent = `Module ${i}`;
+        option.textContent = `Module ${i} (BP ${backplane}, Mod ${moduleInBp})`;
         select.appendChild(option);
     }
 }
@@ -339,24 +429,10 @@ function populateModuleSelector() {
 function updateCameraDisplay() {
     if (!cameraViz) return;
     
-    if (cameraViz.simulationMode) {
-        // Already updating in simulation mode
-        return;
+    if (!cameraViz.simulationMode) {
+        // Fetch from server (to be implemented)
+        console.log('Fetching real camera data...');
     }
-    
-    // Fetch latest camera image
-    fetch(`/api/camera/image?module=${cameraViz.currentModule}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.image) {
-                cameraViz.updateImage(
-                    new Uint8Array(data.image),
-                    data.width,
-                    data.height
-                );
-            }
-        })
-        .catch(error => console.error('Error updating camera:', error));
 }
 
 function updateColorScale() {
