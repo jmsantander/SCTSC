@@ -3,11 +3,11 @@
  * 
  * Handles Canvas-based camera display with proper SCT structure.
  * Now supports multiple data types: temperature, voltage, current, and status.
- * The camera display is shared across tabs, changing only the visualized data.
+ * The camera display is shared across tabs by moving DOM elements.
  * 
  * @module CameraVisualization
  * @author SCT Camera Team
- * @version 2.0.0
+ * @version 2.1.0
  */
 
 class CameraVisualization {
@@ -103,18 +103,6 @@ class CameraVisualization {
     setDataType(type) {
         this.dataType = type;
         
-        // Update title
-        const title = document.getElementById('cameraTitle');
-        if (title) {
-            const labels = {
-                temperature: 'Temperature',
-                voltage: 'Voltage',
-                current: 'Current',
-                status: 'Status'
-            };
-            title.textContent = `Camera View - ${labels[type]}`;
-        }
-        
         // Update tooltip label
         const tooltipLabel = document.getElementById('tooltipValueLabel');
         if (tooltipLabel) {
@@ -136,14 +124,19 @@ class CameraVisualization {
             const value = this.getCurrentValue(moduleId);
             const unit = this.ranges[this.dataType].unit || '';
             
-            document.getElementById('tooltipModuleId').textContent = moduleId;
-            document.getElementById('tooltipBackplane').textContent = 
-                `${pos.backplaneId} (${pos.bpRow},${pos.bpCol})`;
+            const moduleIdEl = document.getElementById('tooltipModuleId');
+            const backplaneEl = document.getElementById('tooltipBackplane');
+            const valueEl = document.getElementById('tooltipValue');
             
-            if (this.dataType === 'status') {
-                document.getElementById('tooltipValue').textContent = value.toUpperCase();
-            } else {
-                document.getElementById('tooltipValue').textContent = `${value.toFixed(2)} ${unit}`;
+            if (moduleIdEl) moduleIdEl.textContent = moduleId;
+            if (backplaneEl) backplaneEl.textContent = `${pos.backplaneId} (${pos.bpRow},${pos.bpCol})`;
+            
+            if (valueEl) {
+                if (this.dataType === 'status') {
+                    valueEl.textContent = value.toUpperCase();
+                } else {
+                    valueEl.textContent = `${value.toFixed(2)} ${unit}`;
+                }
             }
             
             this.tooltip.style.display = 'block';
@@ -191,6 +184,8 @@ class CameraVisualization {
         if (!this.scaleCtx) return;
         
         const canvas = document.getElementById('tempScaleCanvas');
+        if (!canvas) return;
+        
         const width = canvas.width;
         const height = canvas.height;
         const imageData = this.scaleCtx.createImageData(width, height);
@@ -214,15 +209,19 @@ class CameraVisualization {
         
         // Update labels
         const range = this.ranges[this.dataType];
+        const minEl = document.getElementById('scaleMin');
+        const midEl = document.getElementById('scaleMid');
+        const maxEl = document.getElementById('scaleMax');
+        
         if (this.dataType === 'status') {
-            document.getElementById('tempMin').textContent = 'Active';
-            document.getElementById('tempMid').textContent = 'Warning';
-            document.getElementById('tempMax').textContent = 'Error';
+            if (minEl) minEl.textContent = 'Active';
+            if (midEl) midEl.textContent = 'Warning';
+            if (maxEl) maxEl.textContent = 'Error';
         } else {
             const unit = range.unit;
-            document.getElementById('tempMin').textContent = `${range.min.toFixed(0)}${unit}`;
-            document.getElementById('tempMid').textContent = `${((range.min + range.max) / 2).toFixed(0)}${unit}`;
-            document.getElementById('tempMax').textContent = `${range.max.toFixed(0)}${unit}`;
+            if (minEl) minEl.textContent = `${range.min.toFixed(0)}${unit}`;
+            if (midEl) midEl.textContent = `${((range.min + range.max) / 2).toFixed(0)}${unit}`;
+            if (maxEl) maxEl.textContent = `${range.max.toFixed(0)}${unit}`;
         }
     }
 
@@ -409,14 +408,18 @@ class CameraVisualization {
         const indicator = document.getElementById('simulationIndicator');
         
         if (this.simulationMode) {
-            btn.textContent = 'Disable Simulation';
-            btn.classList.add('active');
-            indicator.style.display = 'inline-block';
+            if (btn) {
+                btn.textContent = 'Disable Simulation';
+                btn.classList.add('active');
+            }
+            if (indicator) indicator.style.display = 'inline-block';
             this.startSimulation();
         } else {
-            btn.textContent = 'Enable Simulation';
-            btn.classList.remove('active');
-            indicator.style.display = 'none';
+            if (btn) {
+                btn.textContent = 'Enable Simulation';
+                btn.classList.remove('active');
+            }
+            if (indicator) indicator.style.display = 'none';
             this.stopSimulation();
         }
     }
