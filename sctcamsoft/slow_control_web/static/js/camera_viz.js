@@ -13,6 +13,11 @@
 class CameraVisualization {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
+        if (!this.canvas) {
+            console.warn('Camera canvas not found, delaying initialization');
+            return;
+        }
+        
         this.ctx = this.canvas.getContext('2d');
         this.colorScale = 'hot';
         this.currentModule = 0;
@@ -56,6 +61,7 @@ class CameraVisualization {
         this.setupCanvas();
         this.setupEventListeners();
         this.initTempScaleLegend();
+        this.initialized = true;
     }
 
     setupCanvas() {
@@ -175,7 +181,10 @@ class CameraVisualization {
 
     initTempScaleLegend() {
         const scaleCanvas = document.getElementById('tempScaleCanvas');
-        if (!scaleCanvas) return;
+        if (!scaleCanvas) {
+            console.warn('Temperature scale canvas not found');
+            return;
+        }
         this.scaleCtx = scaleCanvas.getContext('2d');
         this.updateTempScaleLegend();
     }
@@ -265,6 +274,8 @@ class CameraVisualization {
     }
 
     drawCamera() {
+        if (!this.canvas) return;
+        
         this.ctx.fillStyle = '#1a1a1a';
         this.ctx.fillRect(0, 0, this.width, this.height);
         
@@ -530,12 +541,19 @@ class CameraVisualization {
 }
 
 let cameraViz;
+let cameraInitialized = false;
 
 function initCameraVisualization() {
-    cameraViz = new CameraVisualization('cameraCanvas');
-    populateModuleSelector();
-    cameraViz.drawCamera();
-    cameraViz.updateStatistics();
+    // Only initialize if canvas exists (i.e., we're on a camera tab)
+    if (document.getElementById('cameraCanvas') && !cameraInitialized) {
+        cameraViz = new CameraVisualization('cameraCanvas');
+        if (cameraViz.initialized) {
+            populateModuleSelector();
+            cameraViz.drawCamera();
+            cameraViz.updateStatistics();
+            cameraInitialized = true;
+        }
+    }
 }
 
 function populateModuleSelector() {
@@ -572,12 +590,14 @@ function selectModule() {
 }
 
 function toggleSimulation() {
-    if (!cameraViz) return;
-    cameraViz.toggleSimulation();
+    if (!cameraViz) {
+        // Try to initialize if not already done
+        initCameraVisualization();
+    }
+    if (cameraViz) {
+        cameraViz.toggleSimulation();
+    }
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initCameraVisualization);
-} else {
-    initCameraVisualization();
-}
+// Don't initialize on page load - wait for camera tab to be shown
+// This will be called from app.js when needed
