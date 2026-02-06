@@ -2,13 +2,11 @@
  * Main Application Script
  * 
  * Handles tab navigation and coordinates between camera visualization
- * and monitoring displays. Camera display is shared across temperature,
- * voltage, current, and status tabs by moving DOM elements.
+ * and monitoring displays. Camera stays in place and switches data types.
  */
 
 let socket;
 let currentTab = 'system';
-let cameraDisplayElement = null;
 
 /**
  * Initialize application
@@ -47,7 +45,7 @@ function initWebSocket() {
 }
 
 /**
- * Show a specific tab and move camera display if needed
+ * Show a specific tab and update camera data type if needed
  * 
  * @param {string} tabName - Tab identifier
  */
@@ -76,37 +74,23 @@ function showTab(tabName) {
         }
     });
     
-    // Camera tabs that use the shared camera display
-    const cameraTabsWithDisplay = ['temperature', 'voltage', 'current', 'status'];
+    // Camera tabs that use the camera visualization
+    const cameraDataTypes = {
+        'temperature': 'temperature',
+        'voltage': 'voltage',
+        'current': 'current',
+        'status': 'status'
+    };
     
-    if (cameraTabsWithDisplay.includes(tabName)) {
+    if (cameraDataTypes[tabName]) {
         // Initialize camera on first access to a camera tab
         if (typeof initCameraVisualization === 'function' && !window.cameraInitialized) {
             initCameraVisualization();
         }
         
-        // Get or create reference to camera display
-        if (!cameraDisplayElement) {
-            cameraDisplayElement = document.querySelector('.camera-display');
-        }
-        
-        // Move camera display to current tab if it exists
-        if (cameraDisplayElement) {
-            const targetContainer = document.querySelector(`#${tabName}-tab .visualization-container`);
-            if (targetContainer && !targetContainer.querySelector('.camera-display')) {
-                // Insert camera display at the beginning of the container (after h2)
-                const h2 = targetContainer.querySelector('h2');
-                if (h2 && h2.nextSibling) {
-                    targetContainer.insertBefore(cameraDisplayElement, h2.nextSibling);
-                } else {
-                    targetContainer.appendChild(cameraDisplayElement);
-                }
-            }
-        }
-        
         // Update camera visualization data type
         if (window.cameraViz && window.cameraViz.initialized) {
-            cameraViz.setDataType(tabName);
+            cameraViz.setDataType(cameraDataTypes[tabName]);
         }
     }
 }
