@@ -18,12 +18,14 @@
 #cameraCanvas {
     display: block;
     margin: 0 auto;
-    max-width: 100%;
+    width: 100%;  /* Changed from max-width */
+    max-width: 1200px;  /* Maximum width */
     height: auto;
     border: 2px solid #444;
     border-radius: 4px;
     cursor: crosshair;
     background: #1a1a1a;
+    image-rendering: pixelated;  /* Crisp pixel rendering for camera data */
 }
 
 .camera-controls {
@@ -47,6 +49,27 @@
 
 .camera-controls button:hover {
     background: #45b8b0;
+}
+
+.camera-controls button.active {
+    background: #ff6b6b;
+}
+
+.camera-controls button.active:hover {
+    background: #ff5252;
+}
+
+.camera-controls button.simulation-mode {
+    background: #ffe66d;
+    color: #1e1e1e;
+}
+
+.camera-controls button.simulation-mode:hover {
+    background: #ffd93d;
+}
+
+.camera-controls button.simulation-mode.active {
+    background: #ff6b6b;
 }
 
 .camera-controls label {
@@ -74,6 +97,18 @@
     color: #4ecdc4;
     font-family: 'Courier New', monospace;
     font-size: 14px;
+}
+
+.simulation-indicator {
+    display: inline-block;
+    padding: 4px 12px;
+    background: #ffe66d;
+    color: #1e1e1e;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 12px;
+    margin-left: 10px;
+    animation: pulse 2s ease-in-out infinite;
 }
 
 /* Module Grid (Hexagonal Layout) */
@@ -226,6 +261,10 @@
     .camera-controls button,
     .camera-controls label {
         width: 100%;
+    }
+    
+    #cameraCanvas {
+        max-width: 100%;
     }
 }
 
