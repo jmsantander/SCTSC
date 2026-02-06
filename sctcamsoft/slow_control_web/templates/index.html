@@ -6,6 +6,8 @@
     <title>SCT Camera Slow Control</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
@@ -18,19 +20,229 @@
         </header>
 
         <nav class="tab-navigation">
-            <button class="tab-button active" onclick="showTab('system')">System</button>
-            <button class="tab-button" onclick="showTab('power')">Power</button>
-            <button class="tab-button" onclick="showTab('modules')">Modules</button>
-            <button class="tab-button" onclick="showTab('temperature')">Temperature</button>
-            <button class="tab-button" onclick="showTab('chiller')">Chiller</button>
-            <button class="tab-button" onclick="showTab('shutter')">Shutter</button>
-            <button class="tab-button" onclick="showTab('backplane')">Backplane</button>
-            <button class="tab-button" onclick="showTab('target')">Target</button>
+            <button class="tab-button active" onclick="showTab('temperature')">Temperature</button>
+            <button class="tab-button" onclick="showTab('voltage')">Voltage</button>
+            <button class="tab-button" onclick="showTab('current')">Current</button>
+            <button class="tab-button" onclick="showTab('status')">Status</button>
+            <button class="tab-button" onclick="showTab('monitoring')">Monitoring</button>
+            <button class="tab-button" onclick="showTab('system')">System</button>
         </nav>
 
         <main>
+            <!-- Shared Camera Display Section -->
+            <div class="camera-section">
+                <div class="camera-header">
+                    <h2 id="cameraTitle">Camera View - Temperature</h2>
+                    <div class="camera-controls">
+                        <button id="simulationBtn" class="control-button" onclick="toggleSimulation()">Enable Simulation</button>
+                        <span id="simulationIndicator" class="simulation-badge" style="display: none;">● SIMULATION</span>
+                        
+                        <label for="colorScale">Color Scale:</label>
+                        <select id="colorScale" onchange="updateColorScale()">
+                            <option value="grayscale">Grayscale</option>
+                            <option value="hot" selected>Hot</option>
+                            <option value="viridis">Viridis</option>
+                        </select>
+                        
+                        <label for="moduleSelect">Module:</label>
+                        <select id="moduleSelect" onchange="selectModule()"></select>
+                    </div>
+                </div>
+
+                <!-- Camera Canvas Display -->
+                <div class="camera-display">
+                    <canvas id="cameraCanvas"></canvas>
+                </div>
+
+                <!-- Temperature Scale Legend -->
+                <div class="temp-scale-container">
+                    <div class="temp-scale-label">Scale:</div>
+                    <div class="temp-scale">
+                        <canvas id="tempScaleCanvas" width="400" height="30"></canvas>
+                        <div class="temp-scale-labels">
+                            <span id="tempMin">10°C</span>
+                            <span id="tempMid">20°C</span>
+                            <span id="tempMax">30°C</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Module Info Display -->
+                <div class="pixel-info" id="pixelInfo">Hover over modules for detailed information</div>
+
+                <!-- Tooltip -->
+                <div id="cameraTooltip" class="camera-tooltip">
+                    <div><strong>Module ID:</strong> <span id="tooltipModuleId">-</span></div>
+                    <div><strong>Backplane:</strong> <span id="tooltipBackplane">-</span></div>
+                    <div><strong id="tooltipValueLabel">Temperature:</strong> <span id="tooltipValue">-</span></div>
+                </div>
+            </div>
+
+            <!-- Temperature Tab -->
+            <div id="temperature-tab" class="tab-content active">
+                <div class="control-panel">
+                    <h2>Temperature Statistics</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Average</div>
+                            <div class="stat-value" id="tempAvg">--</div>
+                            <div class="stat-unit">°C</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Minimum</div>
+                            <div class="stat-value" id="tempMin">--</div>
+                            <div class="stat-unit">°C</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Maximum</div>
+                            <div class="stat-value" id="tempMax">--</div>
+                            <div class="stat-unit">°C</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Std Dev</div>
+                            <div class="stat-value" id="tempStdDev">--</div>
+                            <div class="stat-unit">°C</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Voltage Tab -->
+            <div id="voltage-tab" class="tab-content">
+                <div class="control-panel">
+                    <h2>Voltage Statistics</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Average</div>
+                            <div class="stat-value" id="voltAvg">--</div>
+                            <div class="stat-unit">V</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Minimum</div>
+                            <div class="stat-value" id="voltMin">--</div>
+                            <div class="stat-unit">V</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Maximum</div>
+                            <div class="stat-value" id="voltMax">--</div>
+                            <div class="stat-unit">V</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Std Dev</div>
+                            <div class="stat-value" id="voltStdDev">--</div>
+                            <div class="stat-unit">V</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Tab -->
+            <div id="current-tab" class="tab-content">
+                <div class="control-panel">
+                    <h2>Current Statistics</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Average</div>
+                            <div class="stat-value" id="currentAvg">--</div>
+                            <div class="stat-unit">A</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Minimum</div>
+                            <div class="stat-value" id="currentMin">--</div>
+                            <div class="stat-unit">A</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Maximum</div>
+                            <div class="stat-value" id="currentMax">--</div>
+                            <div class="stat-unit">A</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Std Dev</div>
+                            <div class="stat-value" id="currentStdDev">--</div>
+                            <div class="stat-unit">A</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Tab -->
+            <div id="status-tab" class="tab-content">
+                <div class="control-panel">
+                    <h2>Module Status Overview</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card status-active">
+                            <div class="stat-label">Active</div>
+                            <div class="stat-value" id="statusActive">--</div>
+                            <div class="stat-unit">modules</div>
+                        </div>
+                        <div class="stat-card status-warning">
+                            <div class="stat-label">Warning</div>
+                            <div class="stat-value" id="statusWarning">--</div>
+                            <div class="stat-unit">modules</div>
+                        </div>
+                        <div class="stat-card status-error">
+                            <div class="stat-label">Error</div>
+                            <div class="stat-value" id="statusError">--</div>
+                            <div class="stat-unit">modules</div>
+                        </div>
+                        <div class="stat-card status-offline">
+                            <div class="stat-label">Offline</div>
+                            <div class="stat-value" id="statusOffline">--</div>
+                            <div class="stat-unit">modules</div>
+                        </div>
+                    </div>
+                    <div class="status-legend">
+                        <h3>Status Color Legend</h3>
+                        <div class="legend-item"><span class="legend-color" style="background: #4ecdc4;"></span> Active (Normal)</div>
+                        <div class="legend-item"><span class="legend-color" style="background: #ffe66d;"></span> Warning (Needs Attention)</div>
+                        <div class="legend-item"><span class="legend-color" style="background: #ff6b6b;"></span> Error (Critical)</div>
+                        <div class="legend-item"><span class="legend-color" style="background: #666;"></span> Offline (Not Responding)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monitoring Tab (Time Series) -->
+            <div id="monitoring-tab" class="tab-content">
+                <div class="control-panel">
+                    <h2>Time Series Monitoring</h2>
+                    <button id="monitoringSimBtn" class="control-button" onclick="toggleMonitoringSimulation()">Enable Monitoring Simulation</button>
+                    <span id="monitoringSimIndicator" class="simulation-badge" style="display: none;">● SIMULATION</span>
+                </div>
+
+                <div class="monitoring-container">
+                    <!-- Gauges -->
+                    <div class="gauge-grid">
+                        <div class="gauge-container">
+                            <h3>Temperature</h3>
+                            <canvas id="tempGauge"></canvas>
+                            <div class="gauge-value" id="temperatureValue">-- °C</div>
+                        </div>
+                        <div class="gauge-container">
+                            <h3>Voltage</h3>
+                            <canvas id="voltageGauge"></canvas>
+                            <div class="gauge-value" id="voltageValue">-- V</div>
+                        </div>
+                        <div class="gauge-container">
+                            <h3>Current</h3>
+                            <canvas id="currentGauge"></canvas>
+                            <div class="gauge-value" id="currentValue">-- A</div>
+                        </div>
+                    </div>
+
+                    <!-- Time Series Plots -->
+                    <div class="plot-grid">
+                        <div class="plot-container">
+                            <div id="tempPlot"></div>
+                        </div>
+                        <div class="plot-container">
+                            <div id="powerPlot"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- System Tab -->
-            <div id="system-tab" class="tab-content active">
+            <div id="system-tab" class="tab-content">
                 <div class="control-panel">
                     <h2>System Controls</h2>
                     <div class="button-group">
@@ -57,82 +269,14 @@
                     <!-- Device cards will be populated dynamically -->
                 </div>
             </div>
-
-            <!-- Power Tab -->
-            <div id="power-tab" class="tab-content">
-                <div class="control-panel">
-                    <h2>Power Controls</h2>
-                    <div id="powerControls" class="control-grid">
-                        <!-- Power controls will be populated dynamically -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modules Tab -->
-            <div id="modules-tab" class="tab-content">
-                <div class="control-panel">
-                    <h2>Module Controls</h2>
-                    <div id="moduleControls" class="control-grid">
-                        <!-- Module controls will be populated dynamically -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Temperature Tab -->
-            <div id="temperature-tab" class="tab-content">
-                <div class="control-panel">
-                    <h2>Temperature Monitoring</h2>
-                    <div id="temperatureDisplay" class="status-grid">
-                        <!-- Temperature readings will be populated dynamically -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Chiller Tab -->
-            <div id="chiller-tab" class="tab-content">
-                <div class="control-panel">
-                    <h2>Chiller Controls</h2>
-                    <div id="chillerControls" class="control-grid">
-                        <!-- Chiller controls will be populated dynamically -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Shutter Tab -->
-            <div id="shutter-tab" class="tab-content">
-                <div class="control-panel">
-                    <h2>Shutter Controls</h2>
-                    <div id="shutterControls" class="control-grid">
-                        <!-- Shutter controls will be populated dynamically -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Backplane Tab -->
-            <div id="backplane-tab" class="tab-content">
-                <div class="control-panel">
-                    <h2>Backplane Status</h2>
-                    <div id="backplaneStatus" class="status-grid">
-                        <!-- Backplane status will be populated dynamically -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Target Tab -->
-            <div id="target-tab" class="tab-content">
-                <div class="control-panel">
-                    <h2>Target Controls</h2>
-                    <div id="targetControls" class="control-grid">
-                        <!-- Target controls will be populated dynamically -->
-                    </div>
-                </div>
-            </div>
         </main>
 
         <!-- Alert/Message Area -->
         <div id="alertContainer" class="alert-container"></div>
     </div>
 
+    <script src="{{ url_for('static', filename='js/camera_viz.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/monitoring.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
