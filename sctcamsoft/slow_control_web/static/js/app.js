@@ -75,9 +75,22 @@ function showTab(tabName) {
         }
     });
     
-    // Update camera display data type for temperature, voltage, current, status tabs
-    if (cameraViz && ['temperature', 'voltage', 'current', 'status'].includes(tabName)) {
-        cameraViz.setDataType(tabName);
+    // Show/hide camera section based on tab
+    const cameraSection = document.getElementById('cameraSection');
+    const cameraTabsWithDisplay = ['temperature', 'voltage', 'current', 'status'];
+    
+    if (cameraSection) {
+        if (cameraTabsWithDisplay.includes(tabName)) {
+            cameraSection.style.display = 'block';
+            
+            // Update camera display data type
+            if (cameraViz) {
+                cameraViz.setDataType(tabName);
+            }
+        } else {
+            // Hide camera for monitoring and system tabs
+            cameraSection.style.display = 'none';
+        }
     }
     
     // Special handling for monitoring tab
