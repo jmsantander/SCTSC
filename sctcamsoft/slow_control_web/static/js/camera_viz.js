@@ -4,10 +4,11 @@
  * Handles Canvas-based camera display with proper SCT structure.
  * Now supports multiple data types: temperature, voltage, current, and status.
  * The camera display is shared across tabs by moving DOM elements.
+ * Circular aperture created by removing corner modules.
  * 
  * @module CameraVisualization
  * @author SCT Camera Team
- * @version 2.1.0
+ * @version 2.2.0
  */
 
 class CameraVisualization {
@@ -36,17 +37,20 @@ class CameraVisualization {
         this.modulesPerRow = 5;
         this.totalModules = 225;
         
-        // Visual parameters - INCREASED MODULE SIZE FOR LARGER DISPLAY
-        this.moduleSize = 64;  // Increased from 48 to 64 (25% larger)
-        this.backplaneGap = 16;  // Increased proportionally
+        // Visual parameters
+        this.moduleSize = 64;
+        this.backplaneGap = 16;
         this.gridLineWidth = 1;
         this.backplaneLineWidth = 3;
+        
+        // Define which modules are inactive (removed for circular aperture)
+        this.inactiveModules = this.defineInactiveModules();
         
         // Data arrays for each type
         this.temperatures = new Array(this.totalModules).fill(20);
         this.voltages = new Array(this.totalModules).fill(5.0);
         this.currents = new Array(this.totalModules).fill(2.5);
-        this.statuses = new Array(this.totalModules).fill('active');  // 'active', 'warning', 'error', 'offline'
+        this.statuses = new Array(this.totalModules).fill('active');
         
         // Value ranges for each data type
         this.ranges = {
@@ -62,6 +66,60 @@ class CameraVisualization {
         this.setupEventListeners();
         this.initTempScaleLegend();
         this.initialized = true;
+    }
+
+    /**
+     * Define which modules are inactive to create circular aperture
+     * Removes corners from the 4 corner backplanes
+     */
+    defineInactiveModules() {
+        const inactive = new Set();
+        
+        // Helper function to get module ID from backplane and position
+        const getModuleId = (backplaneId, row, col) => {
+            return backplaneId * 25 + row * 5 + col;
+        };
+        
+        // Top-left corner (backplane 0)
+        // Remove: top 5, then 3, 2, 1, 1 from left side
+        for (let col = 0; col < 5; col++) inactive.add(getModuleId(0, 0, col)); // Row 0: all 5
+        for (let col = 0; col < 3; col++) inactive.add(getModuleId(0, 1, col)); // Row 1: left 3
+        for (let col = 0; col < 2; col++) inactive.add(getModuleId(0, 2, col)); // Row 2: left 2
+        inactive.add(getModuleId(0, 3, 0)); // Row 3: left 1
+        inactive.add(getModuleId(0, 4, 0)); // Row 4: left 1
+        
+        // Top-right corner (backplane 2)
+        // Remove: top 5, then 3, 2, 1, 1 from right side
+        for (let col = 0; col < 5; col++) inactive.add(getModuleId(2, 0, col)); // Row 0: all 5
+        for (let col = 2; col < 5; col++) inactive.add(getModuleId(2, 1, col)); // Row 1: right 3
+        for (let col = 3; col < 5; col++) inactive.add(getModuleId(2, 2, col)); // Row 2: right 2
+        inactive.add(getModuleId(2, 3, 4)); // Row 3: right 1
+        inactive.add(getModuleId(2, 4, 4)); // Row 4: right 1
+        
+        // Bottom-left corner (backplane 6)
+        // Remove: bottom 5, then 3, 2, 1, 1 from left side (mirrored)
+        inactive.add(getModuleId(6, 0, 0)); // Row 0: left 1
+        inactive.add(getModuleId(6, 1, 0)); // Row 1: left 1
+        for (let col = 0; col < 2; col++) inactive.add(getModuleId(6, 2, col)); // Row 2: left 2
+        for (let col = 0; col < 3; col++) inactive.add(getModuleId(6, 3, col)); // Row 3: left 3
+        for (let col = 0; col < 5; col++) inactive.add(getModuleId(6, 4, col)); // Row 4: all 5
+        
+        // Bottom-right corner (backplane 8)
+        // Remove: bottom 5, then 3, 2, 1, 1 from right side (mirrored)
+        inactive.add(getModuleId(8, 0, 4)); // Row 0: right 1
+        inactive.add(getModuleId(8, 1, 4)); // Row 1: right 1
+        for (let col = 3; col < 5; col++) inactive.add(getModuleId(8, 2, col)); // Row 2: right 2
+        for (let col = 2; col < 5; col++) inactive.add(getModuleId(8, 3, col)); // Row 3: right 3
+        for (let col = 0; col < 5; col++) inactive.add(getModuleId(8, 4, col)); // Row 4: all 5
+        
+        return inactive;
+    }
+
+    /**
+     * Check if a module is active (not in circular aperture cutout)
+     */
+    isModuleActive(moduleId) {
+        return !this.inactiveModules.has(moduleId);
     }
 
     setupCanvas() {
@@ -96,20 +154,15 @@ class CameraVisualization {
             const x = Math.floor((e.clientX - rect.left) * this.canvas.width / rect.width);
             const y = Math.floor((e.clientY - rect.top) * this.canvas.height / rect.height);
             const moduleId = this.getModuleAtPosition(x, y);
-            if (moduleId >= 0) {
+            if (moduleId >= 0 && this.isModuleActive(moduleId)) {
                 this.selectModule(moduleId);
             }
         });
     }
 
-    /**
-     * Set the data type to display
-     * @param {string} type - 'temperature', 'voltage', 'current', or 'status'
-     */
     setDataType(type) {
         this.dataType = type;
         
-        // Update tooltip label
         const tooltipLabel = document.getElementById('tooltipValueLabel');
         if (tooltipLabel) {
             tooltipLabel.textContent = this.ranges[type].label + ':';
@@ -125,7 +178,7 @@ class CameraVisualization {
         
         if (!this.tooltip) return;
         
-        if (moduleId >= 0 && moduleId < this.totalModules) {
+        if (moduleId >= 0 && moduleId < this.totalModules && this.isModuleActive(moduleId)) {
             const pos = this.getModulePosition(moduleId);
             const value = this.getCurrentValue(moduleId);
             const unit = this.ranges[this.dataType].unit || '';
@@ -166,9 +219,6 @@ class CameraVisualization {
         }
     }
 
-    /**
-     * Get current value for a module based on active data type
-     */
     getCurrentValue(moduleId) {
         switch (this.dataType) {
             case 'temperature': return this.temperatures[moduleId];
@@ -216,7 +266,6 @@ class CameraVisualization {
         
         this.scaleCtx.putImageData(imageData, 0, 0);
         
-        // Update labels
         const range = this.ranges[this.dataType];
         const minEl = document.getElementById('scaleMin');
         const midEl = document.getElementById('scaleMid');
@@ -280,6 +329,15 @@ class CameraVisualization {
         this.ctx.fillRect(0, 0, this.width, this.height);
         
         for (let i = 0; i < this.totalModules; i++) {
+            // Skip inactive modules (circular aperture)
+            if (!this.isModuleActive(i)) {
+                const pos = this.getModulePosition(i);
+                // Draw inactive modules as dark gray
+                this.ctx.fillStyle = '#0a0a0a';
+                this.ctx.fillRect(pos.x, pos.y, this.moduleSize, this.moduleSize);
+                continue;
+            }
+            
             const pos = this.getModulePosition(i);
             const value = this.getCurrentValue(i);
             const color = this.getColorForValue(value);
@@ -292,9 +350,6 @@ class CameraVisualization {
         this.highlightModule(this.currentModule);
     }
 
-    /**
-     * Get color for a value based on current data type
-     */
     getColorForValue(value) {
         if (this.dataType === 'status') {
             return this.getStatusColor(value);
@@ -306,15 +361,12 @@ class CameraVisualization {
         }
     }
 
-    /**
-     * Get color for status values
-     */
     getStatusColor(status) {
         const colors = {
-            active: { r: 78, g: 205, b: 196 },    // Cyan - #4ecdc4
-            warning: { r: 255, g: 230, b: 109 },  // Yellow - #ffe66d
-            error: { r: 255, g: 107, b: 107 },    // Red - #ff6b6b
-            offline: { r: 102, g: 102, b: 102 }   // Gray - #666
+            active: { r: 78, g: 205, b: 196 },
+            warning: { r: 255, g: 230, b: 109 },
+            error: { r: 255, g: 107, b: 107 },
+            offline: { r: 102, g: 102, b: 102 }
         };
         return colors[status] || colors.offline;
     }
@@ -362,7 +414,7 @@ class CameraVisualization {
     }
 
     highlightModule(moduleId) {
-        if (moduleId < 0 || moduleId >= this.totalModules) return;
+        if (moduleId < 0 || moduleId >= this.totalModules || !this.isModuleActive(moduleId)) return;
         const pos = this.getModulePosition(moduleId);
         this.ctx.strokeStyle = '#ffe66d';
         this.ctx.lineWidth = 3;
@@ -406,7 +458,7 @@ class CameraVisualization {
     }
 
     selectModule(moduleId) {
-        if (moduleId < 0 || moduleId >= this.totalModules) return;
+        if (moduleId < 0 || moduleId >= this.totalModules || !this.isModuleActive(moduleId)) return;
         this.currentModule = moduleId;
         const select = document.getElementById('moduleSelect');
         if (select) select.value = moduleId;
@@ -454,6 +506,9 @@ class CameraVisualization {
 
     updateSimulation() {
         for (let i = 0; i < this.totalModules; i++) {
+            // Skip inactive modules
+            if (!this.isModuleActive(i)) continue;
+            
             const pos = this.getModulePosition(i);
             const nx = (pos.bpCol * this.modulesPerRow + pos.modCol) / (this.modulesPerRow * this.backplanesPerRow);
             const ny = (pos.bpRow * this.modulesPerRow + pos.modRow) / (this.modulesPerRow * this.backplanesPerRow);
@@ -489,23 +544,23 @@ class CameraVisualization {
                 const statuses = ['active', 'warning', 'error', 'offline'];
                 this.statuses[i] = statuses[Math.floor(Math.random() * statuses.length)];
             } else if (this.statuses[i] !== 'active' && Math.random() < 0.01) {
-                this.statuses[i] = 'active';  // Recover to active
+                this.statuses[i] = 'active';
             }
         }
     }
 
-    /**
-     * Update statistics display for current data type
-     */
     updateStatistics() {
         const prefix = this.dataType === 'temperature' ? 'temp' :
                       this.dataType === 'voltage' ? 'volt' :
                       this.dataType === 'current' ? 'current' : 'status';
         
         if (this.dataType === 'status') {
-            // Count status types
             const counts = { active: 0, warning: 0, error: 0, offline: 0 };
-            this.statuses.forEach(s => counts[s]++);
+            for (let i = 0; i < this.totalModules; i++) {
+                if (this.isModuleActive(i)) {
+                    counts[this.statuses[i]]++;
+                }
+            }
             
             const setVal = (id, val) => {
                 const el = document.getElementById(id);
@@ -517,14 +572,16 @@ class CameraVisualization {
             setVal('statusError', counts.error);
             setVal('statusOffline', counts.offline);
         } else {
-            // Calculate numeric statistics
             const data = this.dataType === 'temperature' ? this.temperatures :
                         this.dataType === 'voltage' ? this.voltages : this.currents;
             
-            const avg = data.reduce((a, b) => a + b, 0) / data.length;
-            const min = Math.min(...data);
-            const max = Math.max(...data);
-            const variance = data.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / data.length;
+            // Only use active modules for statistics
+            const activeData = data.filter((val, idx) => this.isModuleActive(idx));
+            
+            const avg = activeData.reduce((a, b) => a + b, 0) / activeData.length;
+            const min = Math.min(...activeData);
+            const max = Math.max(...activeData);
+            const variance = activeData.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / activeData.length;
             const stdDev = Math.sqrt(variance);
             
             const setVal = (id, val) => {
@@ -544,7 +601,6 @@ let cameraViz;
 let cameraInitialized = false;
 
 function initCameraVisualization() {
-    // Only initialize if canvas exists (i.e., we're on a camera tab)
     if (document.getElementById('cameraCanvas') && !cameraInitialized) {
         cameraViz = new CameraVisualization('cameraCanvas');
         if (cameraViz.initialized) {
@@ -561,12 +617,15 @@ function populateModuleSelector() {
     if (!select) return;
     select.innerHTML = '';
     for (let i = 0; i < 225; i++) {
-        const backplane = Math.floor(i / 25);
-        const moduleInBp = i % 25;
-        const option = document.createElement('option');
-        option.value = i;
-        option.textContent = `Module ${i} (BP ${backplane}, Mod ${moduleInBp})`;
-        select.appendChild(option);
+        // Only add active modules to selector
+        if (cameraViz.isModuleActive(i)) {
+            const backplane = Math.floor(i / 25);
+            const moduleInBp = i % 25;
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = `Module ${i} (BP ${backplane}, Mod ${moduleInBp})`;
+            select.appendChild(option);
+        }
     }
 }
 
@@ -591,13 +650,9 @@ function selectModule() {
 
 function toggleSimulation() {
     if (!cameraViz) {
-        // Try to initialize if not already done
         initCameraVisualization();
     }
     if (cameraViz) {
         cameraViz.toggleSimulation();
     }
 }
-
-// Don't initialize on page load - wait for camera tab to be shown
-// This will be called from app.js when needed
