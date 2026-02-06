@@ -5,6 +5,8 @@
  * - 25 modules per backplane (5x5 matrix)
  * - Total: 225 modules
  * - Realistic temperature simulation
+ * - Interactive tooltip
+ * - Temperature scale legend
  */
 
 class CameraVisualization {
@@ -34,10 +36,16 @@ class CameraVisualization {
         // Temperature simulation parameters
         this.baseTemp = 20;  // Base temperature in Celsius
         this.tempVariation = 10;  // Temperature variation range
+        this.minTemp = this.baseTemp - this.tempVariation;
+        this.maxTemp = this.baseTemp + this.tempVariation;
         this.temperatures = new Array(this.totalModules).fill(this.baseTemp);
+        
+        // Tooltip
+        this.tooltip = document.getElementById('cameraTooltip');
         
         this.setupCanvas();
         this.setupEventListeners();
+        this.initTempScaleLegend();
     }
 
     setupCanvas() {
@@ -52,12 +60,23 @@ class CameraVisualization {
     }
 
     setupEventListeners() {
-        // Mouse hover for module info
+        // Mouse hover for module info and tooltip
         this.canvas.addEventListener('mousemove', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             const x = Math.floor((e.clientX - rect.left) * this.canvas.width / rect.width);
             const y = Math.floor((e.clientY - rect.top) * this.canvas.height / rect.height);
-            this.showModuleInfo(x, y);
+            this.showTooltip(e.clientX, e.clientY, x, y);
+        });
+        
+        // Hide tooltip when leaving canvas
+        this.canvas.addEventListener('mouseleave', () => {
+            if (this.tooltip) {
+                this.tooltip.style.display = 'none';
+            }
+            const infoElement = document.getElementById('pixelInfo');
+            if (infoElement) {
+                infoElement.textContent = 'Hover over modules for detailed information';
+            }
         });
         
         // Click to select module
@@ -70,6 +89,91 @@ class CameraVisualization {
                 this.selectModule(moduleId);
             }
         });
+    }
+
+    /**
+     * Show tooltip with module information
+     */
+    showTooltip(clientX, clientY, canvasX, canvasY) {
+        const moduleId = this.getModuleAtPosition(canvasX, canvasY);
+        
+        if (!this.tooltip) return;
+        
+        if (moduleId >= 0 && moduleId < this.totalModules) {
+            const pos = this.getModulePosition(moduleId);
+            const temp = this.temperatures[moduleId];
+            
+            // Update tooltip content
+            document.getElementById('tooltipModuleId').textContent = moduleId;
+            document.getElementById('tooltipBackplane').textContent = 
+                `${pos.backplaneId} (${pos.bpRow},${pos.bpCol})`;
+            document.getElementById('tooltipTemp').textContent = `${temp.toFixed(2)}°C`;
+            
+            // Position tooltip
+            this.tooltip.style.display = 'block';
+            this.tooltip.style.left = (clientX + 15) + 'px';
+            this.tooltip.style.top = (clientY + 15) + 'px';
+            
+            // Update info bar
+            const infoElement = document.getElementById('pixelInfo');
+            if (infoElement) {
+                infoElement.textContent = `Module ${moduleId} | ` +
+                    `Backplane ${pos.backplaneId} | ` +
+                    `Position (${pos.modRow},${pos.modCol}) | ` +
+                    `Temp: ${temp.toFixed(2)}°C`;
+            }
+        } else {
+            this.tooltip.style.display = 'none';
+            const infoElement = document.getElementById('pixelInfo');
+            if (infoElement) {
+                infoElement.textContent = 'Hover over modules for detailed information';
+            }
+        }
+    }
+
+    /**
+     * Initialize temperature scale legend
+     */
+    initTempScaleLegend() {
+        const scaleCanvas = document.getElementById('tempScaleCanvas');
+        if (!scaleCanvas) return;
+        
+        this.scaleCtx = scaleCanvas.getContext('2d');
+        this.updateTempScaleLegend();
+    }
+
+    /**
+     * Update temperature scale legend
+     */
+    updateTempScaleLegend() {
+        if (!this.scaleCtx) return;
+        
+        const canvas = document.getElementById('tempScaleCanvas');
+        const width = canvas.width;
+        const height = canvas.height;
+        
+        // Draw gradient
+        const imageData = this.scaleCtx.createImageData(width, height);
+        
+        for (let x = 0; x < width; x++) {
+            const value = Math.floor((x / width) * 255);
+            const color = this.applyColorScale(value);
+            
+            for (let y = 0; y < height; y++) {
+                const idx = (y * width + x) * 4;
+                imageData.data[idx] = color.r;
+                imageData.data[idx + 1] = color.g;
+                imageData.data[idx + 2] = color.b;
+                imageData.data[idx + 3] = 255;
+            }
+        }
+        
+        this.scaleCtx.putImageData(imageData, 0, 0);
+        
+        // Update labels
+        document.getElementById('tempMin').textContent = `${this.minTemp.toFixed(0)}°C`;
+        document.getElementById('tempMid').textContent = `${this.baseTemp.toFixed(0)}°C`;
+        document.getElementById('tempMax').textContent = `${this.maxTemp.toFixed(0)}°C`;
     }
 
     /**
@@ -141,9 +245,7 @@ class CameraVisualization {
             const temp = this.temperatures[i];
             
             // Map temperature to 0-255 range for colormap
-            const minTemp = this.baseTemp - this.tempVariation;
-            const maxTemp = this.baseTemp + this.tempVariation;
-            const normalized = (temp - minTemp) / (maxTemp - minTemp);
+            const normalized = (temp - this.minTemp) / (this.maxTemp - this.minTemp);
             const value = Math.floor(Math.max(0, Math.min(1, normalized)) * 255);
             
             // Get color
@@ -225,28 +327,6 @@ class CameraVisualization {
     }
 
     /**
-     * Show module information on hover
-     */
-    showModuleInfo(x, y) {
-        const moduleId = this.getModuleAtPosition(x, y);
-        
-        const infoElement = document.getElementById('pixelInfo');
-        if (!infoElement) return;
-        
-        if (moduleId >= 0 && moduleId < this.totalModules) {
-            const pos = this.getModulePosition(moduleId);
-            const temp = this.temperatures[moduleId];
-            
-            infoElement.textContent = `Module ${moduleId} | ` +
-                `Backplane ${pos.backplaneId} (${pos.bpRow},${pos.bpCol}) | ` +
-                `Position (${pos.modRow},${pos.modCol}) | ` +
-                `Temp: ${temp.toFixed(2)}°C`;
-        } else {
-            infoElement.textContent = 'Hover over modules for information';
-        }
-    }
-
-    /**
      * Apply color scale to value
      */
     applyColorScale(value) {
@@ -286,6 +366,7 @@ class CameraVisualization {
      */
     setColorScale(scale) {
         this.colorScale = scale;
+        this.updateTempScaleLegend();
         this.drawCamera();
     }
 
