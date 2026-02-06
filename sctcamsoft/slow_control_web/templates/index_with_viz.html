@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCT Camera Slow Control</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/visualization.css') }}">
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SCT Camera Slow Control</h1>
+            <div class="connection-status" id="connectionStatus">
+                <span class="status-indicator" id="statusIndicator"></span>
+                <span id="statusText">Connecting...</span>
+            </div>
+        </header>
+
+        <nav class="tab-navigation">
+            <button class="tab-button active" onclick="showTab('system')">System</button>
+            <button class="tab-button" onclick="showTab('camera')">Camera View</button>
+            <button class="tab-button" onclick="showTab('power')">Power</button>
+            <button class="tab-button" onclick="showTab('modules')">Modules</button>
+            <button class="tab-button" onclick="showTab('temperature')">Temperature</button>
+            <button class="tab-button" onclick="showTab('monitoring')">Monitoring</button>
+            <button class="tab-button" onclick="showTab('chiller')">Chiller</button>
+            <button class="tab-button" onclick="showTab('shutter')">Shutter</button>
+            <button class="tab-button" onclick="showTab('backplane')">Backplane</button>
+            <button class="tab-button" onclick="showTab('target')">Target</button>
+        </nav>
+
+        <main>
+            <!-- System Tab -->
+            <div id="system-tab" class="tab-content active">
+                <div class="control-panel">
+                    <h2>System Controls</h2>
+                    <div class="button-group">
+                        <button class="control-button primary" onclick="sendCommand('initialize_system')">Initialize System</button>
+                        <button class="control-button danger" onclick="sendCommand('shutdown')">Shutdown</button>
+                    </div>
+                </div>
+
+                <div class="status-panel">
+                    <h3>System Status</h3>
+                    <div id="systemStatus" class="status-grid">
+                        <div class="status-item">
+                            <span class="status-label">Connection:</span>
+                            <span class="status-value" id="sysConnection">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Last Update:</span>
+                            <span class="status-value" id="sysLastUpdate">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="device-grid" id="deviceOverview">
+                    <!-- Device cards will be populated dynamically -->
+                </div>
+            </div>
+
+            <!-- NEW: Camera Visualization Tab -->
+            <div id="camera-tab" class="tab-content">
+                <div class="visualization-container">
+                    <h2>Camera Module Display</h2>
+                    
+                    <!-- Canvas for Camera Image -->
+                    <div class="camera-display">
+                        <canvas id="cameraCanvas" width="800" height="600"></canvas>
+                        <div class="camera-controls">
+                            <button onclick="updateCameraDisplay()">Refresh</button>
+                            <label>
+                                Color Scale:
+                                <select id="colorScale" onchange="updateColorScale()">
+                                    <option value="grayscale">Grayscale</option>
+                                    <option value="hot">Hot</option>
+                                    <option value="viridis">Viridis</option>
+                                </select>
+                            </label>
+                            <label>
+                                Module:
+                                <select id="moduleSelect" onchange="selectModule()">
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </label>
+                        </div>
+                        <div class="camera-info">
+                            <span id="pixelInfo">Hover over canvas for pixel values</span>
+                        </div>
+                    </div>
+
+                    <!-- Module Status Grid -->
+                    <div class="module-grid" id="moduleGrid">
+                        <!-- Will be populated with module hexagons -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- NEW: Monitoring Tab with Charts -->
+            <div id="monitoring-tab" class="tab-content">
+                <div class="monitoring-container">
+                    <h2>Real-Time Monitoring</h2>
+                    
+                    <!-- Gauge Charts -->
+                    <div class="gauge-grid">
+                        <div class="gauge-card">
+                            <h3>Temperature</h3>
+                            <canvas id="tempGauge"></canvas>
+                            <div class="gauge-value" id="tempValue">-- °C</div>
+                        </div>
+                        <div class="gauge-card">
+                            <h3>Voltage</h3>
+                            <canvas id="voltageGauge"></canvas>
+                            <div class="gauge-value" id="voltageValue">-- V</div>
+                        </div>
+                        <div class="gauge-card">
+                            <h3>Current</h3>
+                            <canvas id="currentGauge"></canvas>
+                            <div class="gauge-value" id="currentValue">-- A</div>
+                        </div>
+                    </div>
+
+                    <!-- Time Series Plots -->
+                    <div class="plot-grid">
+                        <div class="plot-card">
+                            <h3>Temperature History</h3>
+                            <div id="tempPlot"></div>
+                        </div>
+                        <div class="plot-card">
+                            <h3>Voltage/Current History</h3>
+                            <div id="powerPlot"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Power Tab -->
+            <div id="power-tab" class="tab-content">
+                <div class="control-panel">
+                    <h2>Power Controls</h2>
+                    <div id="powerControls" class="control-grid">
+                        <!-- Power controls will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modules Tab -->
+            <div id="modules-tab" class="tab-content">
+                <div class="control-panel">
+                    <h2>Module Controls</h2>
+                    <div id="moduleControls" class="control-grid">
+                        <!-- Module controls will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Temperature Tab -->
+            <div id="temperature-tab" class="tab-content">
+                <div class="control-panel">
+                    <h2>Temperature Monitoring</h2>
+                    <div id="temperatureDisplay" class="status-grid">
+                        <!-- Temperature readings will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chiller Tab -->
+            <div id="chiller-tab" class="tab-content">
+                <div class="control-panel">
+                    <h2>Chiller Controls</h2>
+                    <div id="chillerControls" class="control-grid">
+                        <!-- Chiller controls will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shutter Tab -->
+            <div id="shutter-tab" class="tab-content">
+                <div class="control-panel">
+                    <h2>Shutter Controls</h2>
+                    <div id="shutterControls" class="control-grid">
+                        <!-- Shutter controls will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backplane Tab -->
+            <div id="backplane-tab" class="tab-content">
+                <div class="control-panel">
+                    <h2>Backplane Status</h2>
+                    <div id="backplaneStatus" class="status-grid">
+                        <!-- Backplane status will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Target Tab -->
+            <div id="target-tab" class="tab-content">
+                <div class="control-panel">
+                    <h2>Target Controls</h2>
+                    <div id="targetControls" class="control-grid">
+                        <!-- Target controls will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Alert/Message Area -->
+        <div id="alertContainer" class="alert-container"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/camera_viz.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/monitoring.js') }}"></script>
+</body>
+</html>
