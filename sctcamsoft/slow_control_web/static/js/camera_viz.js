@@ -1,6 +1,7 @@
 /**
  * Camera Visualization Module
  * Handles Canvas-based camera display with color scales and module views
+ * Now includes simulation mode for testing without hardware
  */
 
 class CameraVisualization {
@@ -12,6 +13,9 @@ class CameraVisualization {
         this.colorScale = 'grayscale';
         this.currentModule = 0;
         this.imageData = null;
+        this.simulationMode = false;
+        this.simulationInterval = null;
+        this.simulationTime = 0;
         
         this.setupEventListeners();
     }
@@ -179,15 +183,126 @@ class CameraVisualization {
     selectModule(moduleId) {
         this.currentModule = moduleId;
         console.log(`Selected module: ${moduleId}`);
-        // Request module data from server
-        fetch(`/api/camera/module/${moduleId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.image) {
-                    this.updateImage(data.image, data.width, data.height);
+        
+        if (this.simulationMode) {
+            // Generate simulation data immediately
+            const data = this.generateSimulationData();
+            this.updateImage(data, this.width, this.height);
+        } else {
+            // Request module data from server
+            fetch(`/api/camera/module/${moduleId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.image) {
+                        this.updateImage(data.image, data.width, data.height);
+                    }
+                })
+                .catch(error => console.error('Error loading module data:', error));
+        }
+    }
+
+    /**
+     * Toggle simulation mode
+     */
+    toggleSimulation() {
+        this.simulationMode = !this.simulationMode;
+        
+        const btn = document.getElementById('simulationBtn');
+        const indicator = document.getElementById('simulationIndicator');
+        
+        if (this.simulationMode) {
+            btn.textContent = 'Disable Simulation';
+            btn.classList.add('active');
+            indicator.style.display = 'inline-block';
+            this.startSimulation();
+        } else {
+            btn.textContent = 'Enable Simulation';
+            btn.classList.remove('active');
+            indicator.style.display = 'none';
+            this.stopSimulation();
+        }
+    }
+
+    /**
+     * Start simulation mode
+     */
+    startSimulation() {
+        this.simulationTime = 0;
+        this.simulationInterval = setInterval(() => {
+            this.simulationTime += 0.1;
+            const data = this.generateSimulationData();
+            this.updateImage(data, this.width, this.height);
+        }, 100); // Update 10 times per second
+    }
+
+    /**
+     * Stop simulation mode
+     */
+    stopSimulation() {
+        if (this.simulationInterval) {
+            clearInterval(this.simulationInterval);
+            this.simulationInterval = null;
+        }
+    }
+
+    /**
+     * Generate animated simulation data
+     * @returns {Uint8Array} Simulated pixel data
+     */
+    generateSimulationData() {
+        const data = new Uint8Array(this.width * this.height);
+        
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                const idx = y * this.width + x;
+                
+                // Normalized coordinates (-1 to 1)
+                const nx = (x / this.width) * 2 - 1;
+                const ny = (y / this.height) * 2 - 1;
+                
+                // Different patterns based on module
+                let value;
+                switch (this.currentModule % 4) {
+                    case 0:
+                        // Animated radial waves
+                        const r = Math.sqrt(nx * nx + ny * ny);
+                        value = (Math.sin(r * 10 - this.simulationTime * 5) + 1) * 0.5;
+                        break;
+                    
+                    case 1:
+                        // Moving interference pattern
+                        value = (Math.sin(nx * 8 + this.simulationTime) * 
+                                Math.cos(ny * 8 + this.simulationTime) + 1) * 0.5;
+                        break;
+                    
+                    case 2:
+                        // Rotating spiral
+                        const angle = Math.atan2(ny, nx);
+                        const radius = Math.sqrt(nx * nx + ny * ny);
+                        value = (Math.sin(angle * 5 + radius * 10 - this.simulationTime * 3) + 1) * 0.5;
+                        break;
+                    
+                    case 3:
+                        // Plasma effect
+                        value = (Math.sin(nx * 5 + this.simulationTime) +
+                                Math.sin(ny * 6 + this.simulationTime * 1.3) +
+                                Math.sin((nx + ny) * 4 + this.simulationTime * 0.8) +
+                                Math.sin(Math.sqrt(nx * nx + ny * ny) * 8 + this.simulationTime * 2)) / 4 * 0.5 + 0.5;
+                        break;
+                    
+                    default:
+                        value = 0.5;
                 }
-            })
-            .catch(error => console.error('Error loading module data:', error));
+                
+                // Add some noise
+                value += (Math.random() - 0.5) * 0.1;
+                
+                // Clamp and convert to 0-255
+                data[idx] = Math.floor(Math.max(0, Math.min(1, value)) * 255);
+            }
+        }
+        
+        return data;
     }
 }
 
@@ -200,8 +315,12 @@ function initCameraVisualization() {
     // Populate module selector
     populateModuleSelector();
     
-    // Set up periodic updates
-    setInterval(updateCameraDisplay, 1000);
+    // Set up periodic updates (only when not in simulation mode)
+    setInterval(() => {
+        if (!cameraViz.simulationMode) {
+            updateCameraDisplay();
+        }
+    }, 1000);
 }
 
 function populateModuleSelector() {
@@ -219,6 +338,11 @@ function populateModuleSelector() {
 
 function updateCameraDisplay() {
     if (!cameraViz) return;
+    
+    if (cameraViz.simulationMode) {
+        // Already updating in simulation mode
+        return;
+    }
     
     // Fetch latest camera image
     fetch(`/api/camera/image?module=${cameraViz.currentModule}`)
@@ -249,6 +373,11 @@ function selectModule() {
     if (select) {
         cameraViz.selectModule(parseInt(select.value));
     }
+}
+
+function toggleSimulation() {
+    if (!cameraViz) return;
+    cameraViz.toggleSimulation();
 }
 
 // Initialize when DOM is ready
