@@ -1,152 +1,94 @@
 /**
  * Camera Visualization Module
  * 
- * Handles Canvas-based camera display with proper SCT structure:
- * - 9 backplanes arranged in 3x3 matrix
- * - 25 modules per backplane (5x5 matrix)
- * - Total: 225 modules (numbered 0-224)
- * - Realistic temperature simulation with spatial/temporal patterns
- * - Interactive tooltip showing module info
- * - Temperature scale legend with color mapping
+ * Handles Canvas-based camera display with proper SCT structure.
+ * Now supports multiple data types: temperature, voltage, current, and status.
+ * The camera display is shared across tabs, changing only the visualized data.
  * 
  * @module CameraVisualization
  * @author SCT Camera Team
- * @version 1.0.0
- * 
- * @example
- * // Initialize the camera visualization
- * const cameraViz = new CameraVisualization('cameraCanvas');
- * 
- * // Enable simulation mode
- * cameraViz.toggleSimulation();
- * 
- * // Change color scale
- * cameraViz.setColorScale('hot');
- * 
- * // Select a specific module
- * cameraViz.selectModule(112); // Center module of center backplane
+ * @version 2.0.0
  */
 
-/**
- * Main class for camera visualization
- * 
- * Manages the entire camera display including rendering, interaction,
- * and simulation of temperature data across all 225 modules.
- */
 class CameraVisualization {
-    /**
-     * Create a camera visualization instance
-     * 
-     * @param {string} canvasId - HTML ID of the canvas element to render on
-     * 
-     * @example
-     * const viz = new CameraVisualization('cameraCanvas');
-     */
     constructor(canvasId) {
-        // Canvas and rendering context
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext('2d');
+        this.colorScale = 'hot';
+        this.currentModule = 0;
+        this.imageData = null;
+        this.simulationMode = false;
+        this.simulationInterval = null;
+        this.simulationTime = 0;
         
-        // Visualization settings
-        this.colorScale = 'grayscale';  // Current color scale: 'grayscale', 'hot', or 'viridis'
-        this.currentModule = 0;  // Currently selected module ID
-        this.imageData = null;  // Cached image data (future use)
+        // Current data type being displayed
+        this.dataType = 'temperature';  // 'temperature', 'voltage', 'current', 'status'
         
-        // Simulation control
-        this.simulationMode = false;  // Whether simulation is active
-        this.simulationInterval = null;  // Interval timer for animation
-        this.simulationTime = 0;  // Elapsed simulation time in seconds
+        // SCT Camera structure
+        this.numBackplanes = 9;
+        this.backplanesPerRow = 3;
+        this.modulesPerBackplane = 25;
+        this.modulesPerRow = 5;
+        this.totalModules = 225;
         
-        // SCT Camera physical structure
-        this.numBackplanes = 9;  // Total backplanes (3x3 arrangement)
-        this.backplanesPerRow = 3;  // Backplanes per row/column
-        this.modulesPerBackplane = 25;  // Modules per backplane (5x5 arrangement)
-        this.modulesPerRow = 5;  // Modules per row/column within backplane
-        this.totalModules = 225;  // Total number of modules
+        // Visual parameters
+        this.moduleSize = 48;
+        this.backplaneGap = 12;
+        this.gridLineWidth = 1;
+        this.backplaneLineWidth = 3;
         
-        // Visual rendering parameters (pixels)
-        this.moduleSize = 48;  // Width/height of each module square
-        this.backplaneGap = 12;  // Gap between backplanes for visual separation
-        this.gridLineWidth = 1;  // Thin lines between modules
-        this.backplaneLineWidth = 3;  // Thick cyan lines around backplanes
+        // Data arrays for each type
+        this.temperatures = new Array(this.totalModules).fill(20);
+        this.voltages = new Array(this.totalModules).fill(5.0);
+        this.currents = new Array(this.totalModules).fill(2.5);
+        this.statuses = new Array(this.totalModules).fill('active');  // 'active', 'warning', 'error', 'offline'
         
-        // Temperature simulation parameters (Celsius)
-        this.baseTemp = 20;  // Baseline temperature
-        this.tempVariation = 10;  // Max deviation from baseline (+/-)
-        this.minTemp = this.baseTemp - this.tempVariation;  // Minimum temp (10°C)
-        this.maxTemp = this.baseTemp + this.tempVariation;  // Maximum temp (30°C)
-        this.temperatures = new Array(this.totalModules).fill(this.baseTemp);  // Temperature array
+        // Value ranges for each data type
+        this.ranges = {
+            temperature: { min: 10, max: 30, unit: '°C', label: 'Temperature' },
+            voltage: { min: 0, max: 12, unit: 'V', label: 'Voltage' },
+            current: { min: 0, max: 5, unit: 'A', label: 'Current' },
+            status: { values: ['active', 'warning', 'error', 'offline'], label: 'Status' }
+        };
         
-        // UI elements
-        this.tooltip = document.getElementById('cameraTooltip');  // Tooltip DOM element
+        this.tooltip = document.getElementById('cameraTooltip');
         
-        // Initialize
         this.setupCanvas();
         this.setupEventListeners();
         this.initTempScaleLegend();
     }
 
-    /**
-     * Setup canvas dimensions based on camera structure
-     * 
-     * Calculates the total canvas size needed to display all 225 modules
-     * arranged in 9 backplanes with appropriate gaps.
-     * 
-     * Canvas size = (15 modules × 48px) + (2 gaps × 12px) = 780×780 px
-     */
     setupCanvas() {
-        // Calculate canvas size
-        const modulesAcross = this.modulesPerRow * this.backplanesPerRow;  // 15 modules total
-        const gapsAcross = this.backplanesPerRow - 1;  // 2 gaps between 3 backplanes
-        
+        const modulesAcross = this.modulesPerRow * this.backplanesPerRow;
+        const gapsAcross = this.backplanesPerRow - 1;
         this.canvas.width = modulesAcross * this.moduleSize + gapsAcross * this.backplaneGap;
-        this.canvas.height = this.canvas.width;  // Square camera
-        
+        this.canvas.height = this.canvas.width;
         this.width = this.canvas.width;
         this.height = this.canvas.height;
     }
 
-    /**
-     * Setup mouse event listeners for interaction
-     * 
-     * Handles:
-     * - Mouse move: Shows tooltip and updates info display
-     * - Mouse leave: Hides tooltip
-     * - Click: Selects module
-     */
     setupEventListeners() {
-        // Mouse hover for module info and tooltip
         this.canvas.addEventListener('mousemove', (e) => {
-            // Convert screen coordinates to canvas coordinates
             const rect = this.canvas.getBoundingClientRect();
             const x = Math.floor((e.clientX - rect.left) * this.canvas.width / rect.width);
             const y = Math.floor((e.clientY - rect.top) * this.canvas.height / rect.height);
-            
-            // Show tooltip at cursor position
             this.showTooltip(e.clientX, e.clientY, x, y);
         });
         
-        // Hide tooltip when leaving canvas
         this.canvas.addEventListener('mouseleave', () => {
             if (this.tooltip) {
                 this.tooltip.style.display = 'none';
             }
-            
-            // Reset info display
             const infoElement = document.getElementById('pixelInfo');
             if (infoElement) {
                 infoElement.textContent = 'Hover over modules for detailed information';
             }
         });
         
-        // Click to select module
         this.canvas.addEventListener('click', (e) => {
-            // Convert screen coordinates to canvas coordinates
             const rect = this.canvas.getBoundingClientRect();
             const x = Math.floor((e.clientX - rect.left) * this.canvas.width / rect.width);
             const y = Math.floor((e.clientY - rect.top) * this.canvas.height / rect.height);
-            
-            // Get module at click position and select it
             const moduleId = this.getModuleAtPosition(x, y);
             if (moduleId >= 0) {
                 this.selectModule(moduleId);
@@ -155,50 +97,69 @@ class CameraVisualization {
     }
 
     /**
-     * Show tooltip with module information at cursor position
-     * 
-     * @param {number} clientX - Mouse X position in viewport coordinates
-     * @param {number} clientY - Mouse Y position in viewport coordinates
-     * @param {number} canvasX - Mouse X position in canvas coordinates
-     * @param {number} canvasY - Mouse Y position in canvas coordinates
-     * 
-     * @example
-     * // Called automatically by mousemove event listener
-     * this.showTooltip(500, 300, 240, 180);
+     * Set the data type to display
+     * @param {string} type - 'temperature', 'voltage', 'current', or 'status'
      */
+    setDataType(type) {
+        this.dataType = type;
+        
+        // Update title
+        const title = document.getElementById('cameraTitle');
+        if (title) {
+            const labels = {
+                temperature: 'Temperature',
+                voltage: 'Voltage',
+                current: 'Current',
+                status: 'Status'
+            };
+            title.textContent = `Camera View - ${labels[type]}`;
+        }
+        
+        // Update tooltip label
+        const tooltipLabel = document.getElementById('tooltipValueLabel');
+        if (tooltipLabel) {
+            tooltipLabel.textContent = this.ranges[type].label + ':';
+        }
+        
+        this.updateTempScaleLegend();
+        this.drawCamera();
+        this.updateStatistics();
+    }
+
     showTooltip(clientX, clientY, canvasX, canvasY) {
         const moduleId = this.getModuleAtPosition(canvasX, canvasY);
         
         if (!this.tooltip) return;
         
-        // If hovering over a valid module
         if (moduleId >= 0 && moduleId < this.totalModules) {
             const pos = this.getModulePosition(moduleId);
-            const temp = this.temperatures[moduleId];
+            const value = this.getCurrentValue(moduleId);
+            const unit = this.ranges[this.dataType].unit || '';
             
-            // Update tooltip content
             document.getElementById('tooltipModuleId').textContent = moduleId;
             document.getElementById('tooltipBackplane').textContent = 
                 `${pos.backplaneId} (${pos.bpRow},${pos.bpCol})`;
-            document.getElementById('tooltipTemp').textContent = `${temp.toFixed(2)}°C`;
             
-            // Position tooltip near cursor (offset to avoid covering module)
+            if (this.dataType === 'status') {
+                document.getElementById('tooltipValue').textContent = value.toUpperCase();
+            } else {
+                document.getElementById('tooltipValue').textContent = `${value.toFixed(2)} ${unit}`;
+            }
+            
             this.tooltip.style.display = 'block';
             this.tooltip.style.left = (clientX + 15) + 'px';
             this.tooltip.style.top = (clientY + 15) + 'px';
             
-            // Update info bar at bottom
             const infoElement = document.getElementById('pixelInfo');
             if (infoElement) {
+                const valueStr = this.dataType === 'status' ? value.toUpperCase() : `${value.toFixed(2)} ${unit}`;
                 infoElement.textContent = `Module ${moduleId} | ` +
                     `Backplane ${pos.backplaneId} | ` +
                     `Position (${pos.modRow},${pos.modCol}) | ` +
-                    `Temp: ${temp.toFixed(2)}°C`;
+                    `${this.ranges[this.dataType].label}: ${valueStr}`;
             }
         } else {
-            // Hovering over gap between backplanes - hide tooltip
             this.tooltip.style.display = 'none';
-            
             const infoElement = document.getElementById('pixelInfo');
             if (infoElement) {
                 infoElement.textContent = 'Hover over modules for detailed information';
@@ -207,145 +168,96 @@ class CameraVisualization {
     }
 
     /**
-     * Initialize temperature scale legend canvas
-     * 
-     * Sets up the temperature scale gradient bar that shows the
-     * color mapping from minimum to maximum temperature.
+     * Get current value for a module based on active data type
      */
+    getCurrentValue(moduleId) {
+        switch (this.dataType) {
+            case 'temperature': return this.temperatures[moduleId];
+            case 'voltage': return this.voltages[moduleId];
+            case 'current': return this.currents[moduleId];
+            case 'status': return this.statuses[moduleId];
+            default: return 0;
+        }
+    }
+
     initTempScaleLegend() {
         const scaleCanvas = document.getElementById('tempScaleCanvas');
         if (!scaleCanvas) return;
-        
         this.scaleCtx = scaleCanvas.getContext('2d');
         this.updateTempScaleLegend();
     }
 
-    /**
-     * Update temperature scale legend with current color scale
-     * 
-     * Renders a horizontal gradient bar showing the full range of colors
-     * from the current color scale (grayscale, hot, or viridis).
-     * Also updates the temperature labels (min, mid, max).
-     */
     updateTempScaleLegend() {
         if (!this.scaleCtx) return;
         
         const canvas = document.getElementById('tempScaleCanvas');
         const width = canvas.width;
         const height = canvas.height;
-        
-        // Draw gradient by rendering each column with appropriate color
         const imageData = this.scaleCtx.createImageData(width, height);
         
         for (let x = 0; x < width; x++) {
-            // Map X position to 0-255 value range
             const value = Math.floor((x / width) * 255);
-            const color = this.applyColorScale(value);
+            const color = this.dataType === 'status' ? 
+                this.getStatusColor(['active', 'warning', 'error', 'offline'][Math.floor((x / width) * 4)]) :
+                this.applyColorScale(value);
             
-            // Fill entire column with this color
             for (let y = 0; y < height; y++) {
                 const idx = (y * width + x) * 4;
                 imageData.data[idx] = color.r;
                 imageData.data[idx + 1] = color.g;
                 imageData.data[idx + 2] = color.b;
-                imageData.data[idx + 3] = 255;  // Full opacity
+                imageData.data[idx + 3] = 255;
             }
         }
         
         this.scaleCtx.putImageData(imageData, 0, 0);
         
-        // Update temperature labels below gradient
-        document.getElementById('tempMin').textContent = `${this.minTemp.toFixed(0)}°C`;
-        document.getElementById('tempMid').textContent = `${this.baseTemp.toFixed(0)}°C`;
-        document.getElementById('tempMax').textContent = `${this.maxTemp.toFixed(0)}°C`;
+        // Update labels
+        const range = this.ranges[this.dataType];
+        if (this.dataType === 'status') {
+            document.getElementById('tempMin').textContent = 'Active';
+            document.getElementById('tempMid').textContent = 'Warning';
+            document.getElementById('tempMax').textContent = 'Error';
+        } else {
+            const unit = range.unit;
+            document.getElementById('tempMin').textContent = `${range.min.toFixed(0)}${unit}`;
+            document.getElementById('tempMid').textContent = `${((range.min + range.max) / 2).toFixed(0)}${unit}`;
+            document.getElementById('tempMax').textContent = `${range.max.toFixed(0)}${unit}`;
+        }
     }
 
-    /**
-     * Get module ID from canvas pixel position
-     * 
-     * Converts canvas coordinates to module ID, accounting for the
-     * 9 backplane structure and gaps between them.
-     * 
-     * @param {number} x - X coordinate in canvas pixels
-     * @param {number} y - Y coordinate in canvas pixels
-     * @returns {number} Module ID (0-224), or -1 if position is in a gap
-     * 
-     * @example
-     * // Get module at canvas position (100, 100)
-     * const moduleId = viz.getModuleAtPosition(100, 100);
-     * if (moduleId >= 0) {
-     *   console.log('Module', moduleId, 'is at this position');
-     * }
-     */
     getModuleAtPosition(x, y) {
         const sizeWithGap = this.modulesPerRow * this.moduleSize + this.backplaneGap;
-        
-        // Determine which backplane (3x3 grid)
         const bpCol = Math.floor(x / sizeWithGap);
         const bpRow = Math.floor(y / sizeWithGap);
         
-        // Check if position is outside backplane grid
         if (bpCol >= this.backplanesPerRow || bpRow >= this.backplanesPerRow) {
-            return -1;  // In gap
+            return -1;
         }
         
-        // Position within the backplane
         const xInBp = x - bpCol * sizeWithGap;
         const yInBp = y - bpRow * sizeWithGap;
         
-        // Check if in gap between backplanes
         if (xInBp >= this.modulesPerRow * this.moduleSize || 
             yInBp >= this.modulesPerRow * this.moduleSize) {
-            return -1;  // In gap
+            return -1;
         }
         
-        // Determine which module within backplane (5x5 grid)
         const modCol = Math.floor(xInBp / this.moduleSize);
         const modRow = Math.floor(yInBp / this.moduleSize);
-        
-        // Calculate global module ID
         const backplaneId = bpRow * this.backplanesPerRow + bpCol;
         const moduleInBp = modRow * this.modulesPerRow + modCol;
         
         return backplaneId * this.modulesPerBackplane + moduleInBp;
     }
 
-    /**
-     * Get canvas position and metadata for a module
-     * 
-     * Converts module ID to canvas position and calculates all related
-     * position information (backplane location, position within backplane, etc.)
-     * 
-     * @param {number} moduleId - Module ID (0-224)
-     * @returns {Object} Position information
-     * @returns {number} return.x - Canvas X coordinate (pixels)
-     * @returns {number} return.y - Canvas Y coordinate (pixels)
-     * @returns {number} return.backplaneId - Backplane ID (0-8)
-     * @returns {number} return.bpRow - Backplane row in 3x3 grid (0-2)
-     * @returns {number} return.bpCol - Backplane column in 3x3 grid (0-2)
-     * @returns {number} return.modRow - Module row within backplane (0-4)
-     * @returns {number} return.modCol - Module column within backplane (0-4)
-     * 
-     * @example
-     * // Get position of module 112 (center of center backplane)
-     * const pos = viz.getModulePosition(112);
-     * console.log(`Module at (${pos.x}, ${pos.y})`);
-     * console.log(`Backplane ${pos.backplaneId} at (${pos.bpRow}, ${pos.bpCol})`);
-     */
     getModulePosition(moduleId) {
-        // Determine which backplane this module belongs to
         const backplaneId = Math.floor(moduleId / this.modulesPerBackplane);
         const moduleInBp = moduleId % this.modulesPerBackplane;
-        
-        // Backplane position in 3x3 grid
         const bpRow = Math.floor(backplaneId / this.backplanesPerRow);
         const bpCol = backplaneId % this.backplanesPerRow;
-        
-        // Module position within backplane's 5x5 grid
         const modRow = Math.floor(moduleInBp / this.modulesPerRow);
         const modCol = moduleInBp % this.modulesPerRow;
-        
-        // Calculate canvas pixel position
         const sizeWithGap = this.modulesPerRow * this.moduleSize + this.backplaneGap;
         const x = bpCol * sizeWithGap + modCol * this.moduleSize;
         const y = bpRow * sizeWithGap + modRow * this.moduleSize;
@@ -353,56 +265,54 @@ class CameraVisualization {
         return { x, y, backplaneId, bpRow, bpCol, modRow, modCol };
     }
 
-    /**
-     * Draw the entire camera with temperature data
-     * 
-     * Main rendering function that:
-     * 1. Clears the canvas
-     * 2. Draws all 225 modules with temperature-based colors
-     * 3. Draws grid lines between modules
-     * 4. Draws backplane borders
-     * 5. Highlights the selected module
-     */
     drawCamera() {
-        // Clear canvas with dark background
         this.ctx.fillStyle = '#1a1a1a';
         this.ctx.fillRect(0, 0, this.width, this.height);
         
-        // Draw all modules with their temperatures
         for (let i = 0; i < this.totalModules; i++) {
             const pos = this.getModulePosition(i);
-            const temp = this.temperatures[i];
+            const value = this.getCurrentValue(i);
+            const color = this.getColorForValue(value);
             
-            // Map temperature to 0-255 range for colormap
-            const normalized = (temp - this.minTemp) / (this.maxTemp - this.minTemp);
-            const value = Math.floor(Math.max(0, Math.min(1, normalized)) * 255);
-            
-            // Get color from current color scale
-            const color = this.applyColorScale(value);
             this.ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
             this.ctx.fillRect(pos.x, pos.y, this.moduleSize, this.moduleSize);
         }
         
-        // Draw grid lines between modules
         this.drawGrid();
-        
-        // Highlight selected module with yellow border
         this.highlightModule(this.currentModule);
     }
 
     /**
-     * Draw grid lines between modules and around backplanes
-     * 
-     * Draws two types of lines:
-     * 1. Thin gray lines between modules within each backplane
-     * 2. Thick cyan lines around each backplane border
+     * Get color for a value based on current data type
      */
+    getColorForValue(value) {
+        if (this.dataType === 'status') {
+            return this.getStatusColor(value);
+        } else {
+            const range = this.ranges[this.dataType];
+            const normalized = (value - range.min) / (range.max - range.min);
+            const colorValue = Math.floor(Math.max(0, Math.min(1, normalized)) * 255);
+            return this.applyColorScale(colorValue);
+        }
+    }
+
+    /**
+     * Get color for status values
+     */
+    getStatusColor(status) {
+        const colors = {
+            active: { r: 78, g: 205, b: 196 },    // Cyan - #4ecdc4
+            warning: { r: 255, g: 230, b: 109 },  // Yellow - #ffe66d
+            error: { r: 255, g: 107, b: 107 },    // Red - #ff6b6b
+            offline: { r: 102, g: 102, b: 102 }   // Gray - #666
+        };
+        return colors[status] || colors.offline;
+    }
+
     drawGrid() {
-        const sizeWithGap = this.modulesPerRow * this.moduleSize + this.backplaneGap;
-        
-        // Draw thin module grid lines within each backplane
         this.ctx.strokeStyle = '#666';
         this.ctx.lineWidth = this.gridLineWidth;
+        const sizeWithGap = this.modulesPerRow * this.moduleSize + this.backplaneGap;
         
         for (let bpRow = 0; bpRow < this.backplanesPerRow; bpRow++) {
             for (let bpCol = 0; bpCol < this.backplanesPerRow; bpCol++) {
@@ -410,7 +320,6 @@ class CameraVisualization {
                 const bpY = bpRow * sizeWithGap;
                 const bpSize = this.modulesPerRow * this.moduleSize;
                 
-                // Draw vertical lines between columns
                 for (let i = 1; i < this.modulesPerRow; i++) {
                     const x = bpX + i * this.moduleSize;
                     this.ctx.beginPath();
@@ -419,7 +328,6 @@ class CameraVisualization {
                     this.ctx.stroke();
                 }
                 
-                // Draw horizontal lines between rows
                 for (let i = 1; i < this.modulesPerRow; i++) {
                     const y = bpY + i * this.moduleSize;
                     this.ctx.beginPath();
@@ -430,7 +338,6 @@ class CameraVisualization {
             }
         }
         
-        // Draw thick cyan lines around backplanes
         this.ctx.strokeStyle = '#4ecdc4';
         this.ctx.lineWidth = this.backplaneLineWidth;
         
@@ -439,142 +346,74 @@ class CameraVisualization {
                 const x = bpCol * sizeWithGap;
                 const y = bpRow * sizeWithGap;
                 const size = this.modulesPerRow * this.moduleSize;
-                
                 this.ctx.strokeRect(x, y, size, size);
             }
         }
     }
 
-    /**
-     * Highlight selected module with yellow border
-     * 
-     * @param {number} moduleId - Module ID to highlight (0-224)
-     */
     highlightModule(moduleId) {
         if (moduleId < 0 || moduleId >= this.totalModules) return;
-        
         const pos = this.getModulePosition(moduleId);
-        
-        // Draw yellow highlight border with slight inset
         this.ctx.strokeStyle = '#ffe66d';
         this.ctx.lineWidth = 3;
         this.ctx.strokeRect(pos.x + 2, pos.y + 2, this.moduleSize - 4, this.moduleSize - 4);
     }
 
-    /**
-     * Apply color scale to value
-     * 
-     * Converts a 0-255 value to RGB color based on the current color scale.
-     * 
-     * @param {number} value - Value from 0-255 (0=cold, 255=hot)
-     * @returns {Object} RGB color object
-     * @returns {number} return.r - Red component (0-255)
-     * @returns {number} return.g - Green component (0-255)
-     * @returns {number} return.b - Blue component (0-255)
-     * 
-     * @example
-     * const color = viz.applyColorScale(127); // Middle temperature
-     * console.log(`RGB(${color.r}, ${color.g}, ${color.b})`);
-     */
     applyColorScale(value) {
-        const normalized = value / 255;  // 0-1 range
+        const normalized = value / 255;
         
         switch (this.colorScale) {
             case 'grayscale':
-                // Simple linear grayscale: black (0) to white (255)
                 return { r: value, g: value, b: value };
             
             case 'hot':
-                // Hot colormap: black -> red -> yellow -> white
                 if (normalized < 0.33) {
-                    // Black to red
                     const t = normalized / 0.33;
                     return { r: Math.floor(255 * t), g: 0, b: 0 };
                 } else if (normalized < 0.67) {
-                    // Red to yellow
                     const t = (normalized - 0.33) / 0.34;
                     return { r: 255, g: Math.floor(255 * t), b: 0 };
                 } else {
-                    // Yellow to white
                     const t = (normalized - 0.67) / 0.33;
                     return { r: 255, g: 255, b: Math.floor(255 * t) };
                 }
             
             case 'viridis':
-                // Viridis colormap: perceptually uniform, colorblind-friendly
-                // Approximation using quadratic functions
                 const r = Math.floor(255 * (0.267 + 0.529 * normalized - 0.796 * normalized * normalized));
                 const g = Math.floor(255 * (-0.138 + 1.472 * normalized - 0.334 * normalized * normalized));
                 const b = Math.floor(255 * (0.329 - 0.196 * normalized + 0.867 * normalized * normalized));
-                return { 
-                    r: Math.max(0, Math.min(255, r)), 
-                    g: Math.max(0, Math.min(255, g)), 
-                    b: Math.max(0, Math.min(255, b)) 
-                };
+                return { r: Math.max(0, Math.min(255, r)), g: Math.max(0, Math.min(255, g)), b: Math.max(0, Math.min(255, b)) };
             
             default:
-                // Fallback to grayscale
                 return { r: value, g: value, b: value };
         }
     }
 
-    /**
-     * Set color scale and update display
-     * 
-     * @param {string} scale - Color scale name: 'grayscale', 'hot', or 'viridis'
-     * 
-     * @example
-     * viz.setColorScale('hot'); // Use hot colormap
-     */
     setColorScale(scale) {
         this.colorScale = scale;
-        this.updateTempScaleLegend();  // Update legend gradient
-        this.drawCamera();  // Redraw with new colors
-    }
-
-    /**
-     * Select a module and update UI
-     * 
-     * @param {number} moduleId - Module ID to select (0-224)
-     * 
-     * @example
-     * viz.selectModule(112); // Select center module
-     */
-    selectModule(moduleId) {
-        if (moduleId < 0 || moduleId >= this.totalModules) return;
-        
-        this.currentModule = moduleId;
-        
-        // Update dropdown selector
-        const select = document.getElementById('moduleSelect');
-        if (select) {
-            select.value = moduleId;
-        }
-        
-        // Redraw to show new selection highlight
+        this.updateTempScaleLegend();
         this.drawCamera();
     }
 
-    /**
-     * Toggle simulation mode on/off
-     * 
-     * Starts or stops the temperature simulation animation.
-     * Updates button appearance and shows/hides simulation indicator.
-     */
+    selectModule(moduleId) {
+        if (moduleId < 0 || moduleId >= this.totalModules) return;
+        this.currentModule = moduleId;
+        const select = document.getElementById('moduleSelect');
+        if (select) select.value = moduleId;
+        this.drawCamera();
+    }
+
     toggleSimulation() {
         this.simulationMode = !this.simulationMode;
-        
         const btn = document.getElementById('simulationBtn');
         const indicator = document.getElementById('simulationIndicator');
         
         if (this.simulationMode) {
-            // Simulation ON
             btn.textContent = 'Disable Simulation';
             btn.classList.add('active');
             indicator.style.display = 'inline-block';
             this.startSimulation();
         } else {
-            // Simulation OFF
             btn.textContent = 'Enable Simulation';
             btn.classList.remove('active');
             indicator.style.display = 'none';
@@ -582,26 +421,16 @@ class CameraVisualization {
         }
     }
 
-    /**
-     * Start simulation animation
-     * 
-     * Begins updating temperatures at 20 FPS (every 50ms).
-     * Simulation time increments by 0.05 seconds per frame.
-     */
     startSimulation() {
         this.simulationTime = 0;
         this.simulationInterval = setInterval(() => {
             this.simulationTime += 0.05;
             this.updateSimulation();
             this.drawCamera();
-        }, 50); // 20 FPS
+            this.updateStatistics();
+        }, 50);
     }
 
-    /**
-     * Stop simulation animation
-     * 
-     * Clears the animation interval timer.
-     */
     stopSimulation() {
         if (this.simulationInterval) {
             clearInterval(this.simulationInterval);
@@ -609,104 +438,110 @@ class CameraVisualization {
         }
     }
 
-    /**
-     * Update temperature simulation for all modules
-     * 
-     * Creates realistic temperature patterns with:
-     * - Spatial correlation: Nearby modules have similar temperatures
-     * - Temporal variation: Sinusoidal waves that evolve slowly over time
-     * - Hot backplanes: Backplanes 1, 4, and 7 run 2-5°C warmer
-     * - Center hotspots: Centers of hot backplanes are warmest
-     * - Edge cooling: Edge modules are ~1.5°C cooler
-     * - Random noise: ±0.5°C Gaussian noise for realism
-     * - Smooth transitions: Exponential moving average (90% old + 10% new)
-     * 
-     * The simulation uses:
-     * - Sin/cos waves for global temperature patterns
-     * - Radial distance for hotspot effects
-     * - Position-based adjustments for edge cooling
-     */
     updateSimulation() {
         for (let i = 0; i < this.totalModules; i++) {
             const pos = this.getModulePosition(i);
-            
-            // Normalized positions (0-1) across entire camera
             const nx = (pos.bpCol * this.modulesPerRow + pos.modCol) / (this.modulesPerRow * this.backplanesPerRow);
             const ny = (pos.bpRow * this.modulesPerRow + pos.modRow) / (this.modulesPerRow * this.backplanesPerRow);
             
-            // Start with base temperature
-            let temp = this.baseTemp;
-            
-            // Add spatial patterns using sine waves
+            // Temperature simulation
+            let temp = 20;
             temp += Math.sin(nx * Math.PI * 2 + this.simulationTime) * 3;
             temp += Math.cos(ny * Math.PI * 2 + this.simulationTime * 0.7) * 2;
-            
-            // Hotspot on specific backplanes (simulates higher power dissipation)
-            const hotBackplanes = [1, 4, 7];  // Some backplanes run hotter
-            if (hotBackplanes.includes(pos.backplaneId)) {
-                // Create hotspot in center of backplane
-                const dx = pos.modCol - 2;  // Distance from center (0-4 scale)
+            if ([1, 4, 7].includes(pos.backplaneId)) {
+                const dx = pos.modCol - 2;
                 const dy = pos.modRow - 2;
                 const distFromCenter = Math.sqrt(dx * dx + dy * dy);
-                temp += (2.5 - distFromCenter) * 2;  // Hotter in center
+                temp += (2.5 - distFromCenter) * 2;
             }
-            
-            // Edge cooling effect (heat dissipation to surroundings)
             if (pos.bpCol === 0 || pos.bpCol === 2 || pos.bpRow === 0 || pos.bpRow === 2) {
-                temp -= 1.5;  // Edge backplanes are cooler
+                temp -= 1.5;
             }
-            
-            // Add random noise for realism
             temp += (Math.random() - 0.5) * 0.5;
-            
-            // Smooth transition using exponential moving average
-            // This prevents jarring temperature jumps
             this.temperatures[i] = this.temperatures[i] * 0.9 + temp * 0.1;
+            
+            // Voltage simulation
+            let volt = 5.0 + Math.sin(nx * Math.PI + this.simulationTime * 0.5) * 0.5;
+            volt += (Math.random() - 0.5) * 0.1;
+            this.voltages[i] = this.voltages[i] * 0.9 + volt * 0.1;
+            
+            // Current simulation
+            let curr = 2.5 + Math.cos(ny * Math.PI + this.simulationTime * 0.3) * 0.5;
+            curr += (Math.random() - 0.5) * 0.15;
+            this.currents[i] = this.currents[i] * 0.9 + curr * 0.1;
+            
+            // Status simulation (occasional errors)
+            if (Math.random() < 0.001) {
+                const statuses = ['active', 'warning', 'error', 'offline'];
+                this.statuses[i] = statuses[Math.floor(Math.random() * statuses.length)];
+            } else if (this.statuses[i] !== 'active' && Math.random() < 0.01) {
+                this.statuses[i] = 'active';  // Recover to active
+            }
+        }
+    }
+
+    /**
+     * Update statistics display for current data type
+     */
+    updateStatistics() {
+        const prefix = this.dataType === 'temperature' ? 'temp' :
+                      this.dataType === 'voltage' ? 'volt' :
+                      this.dataType === 'current' ? 'current' : 'status';
+        
+        if (this.dataType === 'status') {
+            // Count status types
+            const counts = { active: 0, warning: 0, error: 0, offline: 0 };
+            this.statuses.forEach(s => counts[s]++);
+            
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val;
+            };
+            
+            setVal('statusActive', counts.active);
+            setVal('statusWarning', counts.warning);
+            setVal('statusError', counts.error);
+            setVal('statusOffline', counts.offline);
+        } else {
+            // Calculate numeric statistics
+            const data = this.dataType === 'temperature' ? this.temperatures :
+                        this.dataType === 'voltage' ? this.voltages : this.currents;
+            
+            const avg = data.reduce((a, b) => a + b, 0) / data.length;
+            const min = Math.min(...data);
+            const max = Math.max(...data);
+            const variance = data.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / data.length;
+            const stdDev = Math.sqrt(variance);
+            
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val.toFixed(2);
+            };
+            
+            setVal(prefix + 'Avg', avg);
+            setVal(prefix + 'Min', min);
+            setVal(prefix + 'Max', max);
+            setVal(prefix + 'StdDev', stdDev);
         }
     }
 }
 
-// ============================================================================
-// GLOBAL FUNCTIONS
-// ============================================================================
-
-/**
- * Global camera visualization instance
- * @type {CameraVisualization}
- */
 let cameraViz;
 
-/**
- * Initialize camera visualization on page load
- * 
- * Creates the CameraVisualization instance, populates the module selector
- * dropdown, and performs initial render.
- */
 function initCameraVisualization() {
     cameraViz = new CameraVisualization('cameraCanvas');
     populateModuleSelector();
-    
-    // Initial draw
     cameraViz.drawCamera();
+    cameraViz.updateStatistics();
 }
 
-/**
- * Populate module selector dropdown with all 225 modules
- * 
- * Creates options showing module ID, backplane ID, and module position
- * within the backplane.
- */
 function populateModuleSelector() {
     const select = document.getElementById('moduleSelect');
     if (!select) return;
-    
     select.innerHTML = '';
-    
-    // Add all 225 modules
     for (let i = 0; i < 225; i++) {
         const backplane = Math.floor(i / 25);
         const moduleInBp = i % 25;
-        
         const option = document.createElement('option');
         option.value = i;
         option.textContent = `Module ${i} (BP ${backplane}, Mod ${moduleInBp})`;
@@ -714,65 +549,30 @@ function populateModuleSelector() {
     }
 }
 
-/**
- * Update camera display with real data from server
- * 
- * Fetches current temperature data from the backend API and updates
- * the visualization. Only active when simulation mode is OFF.
- * 
- * @todo Implement API call to /api/camera/modules endpoint
- */
 function updateCameraDisplay() {
     if (!cameraViz) return;
-    
     if (!cameraViz.simulationMode) {
-        // Fetch from server (to be implemented)
         console.log('Fetching real camera data...');
-        // TODO: Implement fetch('/api/camera/modules')
     }
 }
 
-/**
- * Update color scale from dropdown selection
- * 
- * Called when user changes the color scale dropdown.
- */
 function updateColorScale() {
     if (!cameraViz) return;
     const select = document.getElementById('colorScale');
-    if (select) {
-        cameraViz.setColorScale(select.value);
-    }
+    if (select) cameraViz.setColorScale(select.value);
 }
 
-/**
- * Select module from dropdown
- * 
- * Called when user changes the module selector dropdown.
- */
 function selectModule() {
     if (!cameraViz) return;
     const select = document.getElementById('moduleSelect');
-    if (select) {
-        cameraViz.selectModule(parseInt(select.value));
-    }
+    if (select) cameraViz.selectModule(parseInt(select.value));
 }
 
-/**
- * Toggle simulation mode on/off
- * 
- * Called when user clicks the simulation button.
- */
 function toggleSimulation() {
     if (!cameraViz) return;
     cameraViz.toggleSimulation();
 }
 
-// ============================================================================
-// INITIALIZATION
-// ============================================================================
-
-// Initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initCameraVisualization);
 } else {
