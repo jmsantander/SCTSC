@@ -1,0 +1,21 @@
+# Flask Web Application
+Flask>=2.3.0
+Flask-SocketIO>=5.3.0
+
+# WebSocket Support
+python-socketio>=5.9.0
+eventlet>=0.33.3
+
+# Configuration
+PyYAML>=6.0
+
+# Async Support (if needed)
+gevent>=23.9.0
+gevent-websocket>=0.10.1
+
+# Optional: Production Server
+gunicorn>=21.2.0
+
+# If the original code uses PyQt signals (Qt-like patterns)
+# You may need these depending on lib_gui implementation:
+# blinker>=1.6.0  # For signals/slots if not using PyQt
