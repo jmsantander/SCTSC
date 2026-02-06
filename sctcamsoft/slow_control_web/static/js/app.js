@@ -3,21 +3,25 @@
  * 
  * Handles tab navigation and coordinates between camera visualization
  * and monitoring displays. Camera display is shared across temperature,
- * voltage, current, and status tabs.
+ * voltage, current, and status tabs by moving DOM elements.
  */
 
 let socket;
-let currentTab = 'temperature';
+let currentTab = 'system';
+let cameraDisplayElement = null;
 
 /**
  * Initialize application
  */
 function initApp() {
+    // Store reference to camera display (initially in temperature tab)
+    cameraDisplayElement = document.querySelector('#temperature-tab .camera-display');
+    
     // Initialize WebSocket connection
     initWebSocket();
     
     // Show default tab
-    showTab('temperature');
+    showTab('system');
 }
 
 /**
@@ -46,7 +50,7 @@ function initWebSocket() {
 }
 
 /**
- * Show a specific tab
+ * Show a specific tab and move camera display if needed
  * 
  * @param {string} tabName - Tab identifier
  */
@@ -75,27 +79,21 @@ function showTab(tabName) {
         }
     });
     
-    // Show/hide camera section based on tab
-    const cameraSection = document.getElementById('cameraSection');
+    // Move camera display to the current tab if it's one of the camera tabs
     const cameraTabsWithDisplay = ['temperature', 'voltage', 'current', 'status'];
     
-    if (cameraSection) {
-        if (cameraTabsWithDisplay.includes(tabName)) {
-            cameraSection.style.display = 'block';
-            
-            // Update camera display data type
-            if (cameraViz) {
-                cameraViz.setDataType(tabName);
-            }
-        } else {
-            // Hide camera for monitoring and system tabs
-            cameraSection.style.display = 'none';
+    if (cameraTabsWithDisplay.includes(tabName) && cameraDisplayElement) {
+        // Move camera display to current tab
+        const targetContainer = document.querySelector(`#${tabName}-tab .visualization-container`);
+        if (targetContainer && !targetContainer.querySelector('.camera-display')) {
+            // Insert camera display at the beginning of the container
+            targetContainer.insertBefore(cameraDisplayElement, targetContainer.firstChild.nextSibling);
         }
-    }
-    
-    // Special handling for monitoring tab
-    if (tabName === 'monitoring' && window.monitoring) {
-        // Monitoring has its own separate display
+        
+        // Update camera visualization data type
+        if (cameraViz) {
+            cameraViz.setDataType(tabName);
+        }
     }
 }
 
