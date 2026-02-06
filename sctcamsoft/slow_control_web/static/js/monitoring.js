@@ -1,6 +1,7 @@
 /**
  * Monitoring Module
  * Handles real-time monitoring with Plotly.js (time-series) and Chart.js (gauges)
+ * Now includes simulation mode for testing
  */
 
 class MonitoringCharts {
@@ -11,6 +12,9 @@ class MonitoringCharts {
         this.maxDataPoints = 100; // Keep last 100 points
         
         this.gauges = {};
+        this.simulationMode = false;
+        this.simulationInterval = null;
+        this.simulationTime = 0;
         
         this.initializePlots();
         this.initializeGauges();
@@ -276,6 +280,67 @@ class MonitoringCharts {
             this.addDataPoint('current', deviceData.current, timestamp);
         }
     }
+
+    /**
+     * Toggle simulation mode
+     */
+    toggleSimulation() {
+        this.simulationMode = !this.simulationMode;
+        
+        const btn = document.getElementById('monitoringSimBtn');
+        const indicator = document.getElementById('monitoringSimIndicator');
+        
+        if (this.simulationMode) {
+            btn.textContent = 'Disable Simulation';
+            btn.classList.add('active');
+            indicator.style.display = 'inline-block';
+            this.startSimulation();
+        } else {
+            btn.textContent = 'Enable Simulation';
+            btn.classList.remove('active');
+            indicator.style.display = 'none';
+            this.stopSimulation();
+        }
+    }
+
+    /**
+     * Start simulation mode
+     */
+    startSimulation() {
+        this.simulationTime = 0;
+        this.simulationInterval = setInterval(() => {
+            this.simulationTime += 0.5;
+            const data = this.generateSimulationData();
+            this.updateFromDeviceData(data);
+        }, 500); // Update twice per second
+    }
+
+    /**
+     * Stop simulation mode
+     */
+    stopSimulation() {
+        if (this.simulationInterval) {
+            clearInterval(this.simulationInterval);
+            this.simulationInterval = null;
+        }
+    }
+
+    /**
+     * Generate simulated sensor data
+     * @returns {Object} Simulated data
+     */
+    generateSimulationData() {
+        // Generate realistic-looking sensor data with trends and noise
+        const temp = 20 + Math.sin(this.simulationTime * 0.1) * 5 + (Math.random() - 0.5) * 2;
+        const voltage = 5.0 + Math.sin(this.simulationTime * 0.15) * 0.5 + (Math.random() - 0.5) * 0.2;
+        const current = 2.5 + Math.cos(this.simulationTime * 0.12) * 1.0 + (Math.random() - 0.5) * 0.3;
+        
+        return {
+            temperature: temp,
+            voltage: voltage,
+            current: current
+        };
+    }
 }
 
 // Initialize monitoring
@@ -283,6 +348,11 @@ let monitoring;
 
 function initMonitoring() {
     monitoring = new MonitoringCharts();
+}
+
+function toggleMonitoringSimulation() {
+    if (!monitoring) return;
+    monitoring.toggleSimulation();
 }
 
 // Initialize when DOM is ready
