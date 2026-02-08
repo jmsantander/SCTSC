@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCT Camera Slow Control</title>
+    <title>SCT Slow Control GUI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/visualization.css') }}">
     
@@ -13,346 +13,191 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>SCT Camera Slow Control</h1>
-            <div class="connection-status" id="connectionStatus">
-                <span class="status-indicator" id="statusIndicator"></span>
-                <span id="statusText">Connecting...</span>
-            </div>
+    <div class="main-container">
+        <!-- Header with tabs -->
+        <header class="header">
+            <div class="header-title">SCT Slow Control GUI</div>
+            <nav class="camera-tabs">
+                <button class="camera-tab-button active" onclick="switchCameraView('current')">Currents</button>
+                <button class="camera-tab-button" onclick="switchCameraView('voltage')">Voltages</button>
+                <button class="camera-tab-button" onclick="switchCameraView('temperature')">Temp</button>
+                <button class="camera-tab-button" onclick="switchCameraView('status')">Module States</button>
+            </nav>
         </header>
 
-        <nav class="tab-navigation">
-            <button class="tab-button active" onclick="showTab('system')">System</button>
-            <button class="tab-button" onclick="showTab('temperature')">Temperature</button>
-            <button class="tab-button" onclick="showTab('voltage')">Voltage</button>
-            <button class="tab-button" onclick="showTab('current')">Current</button>
-            <button class="tab-button" onclick="showTab('status')">Status</button>
-            <button class="tab-button" onclick="showTab('monitoring')">Monitoring</button>
-            <button class="tab-button" onclick="showTab('power')">Power</button>
-            <button class="tab-button" onclick="showTab('modules')">Modules</button>
-            <button class="tab-button" onclick="showTab('chiller')">Chiller</button>
-            <button class="tab-button" onclick="showTab('shutter')">Shutter</button>
-            <button class="tab-button" onclick="showTab('backplane')">Backplane</button>
-            <button class="tab-button" onclick="showTab('target')">Target</button>
-        </nav>
-
-        <main>
-            <!-- System Tab -->
-            <div id="system-tab" class="tab-content active">
-                <div class="control-panel">
-                    <h2>System Controls</h2>
-                    <div class="button-group">
-                        <button class="control-button primary" onclick="sendCommand('initialize_system')">Initialize System</button>
-                        <button class="control-button danger" onclick="sendCommand('shutdown')">Shutdown</button>
-                    </div>
-                </div>
-
-                <div class="status-panel">
-                    <h3>System Status</h3>
-                    <div id="systemStatus" class="status-grid">
-                        <div class="status-item">
-                            <span class="status-label">Connection:</span>
-                            <span class="status-value" id="sysConnection">-</span>
+        <!-- Main content area: camera on left, controls on right -->
+        <div class="content-area">
+            <!-- Left side: Camera display -->
+            <div class="camera-section">
+                <div class="camera-display-main">
+                    <canvas id="cameraCanvas"></canvas>
+                    <div id="cameraTooltip" class="camera-tooltip" style="display: none;">
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">Module:</span>
+                            <span class="tooltip-value" id="tooltipModuleId">-</span>
                         </div>
-                        <div class="status-item">
-                            <span class="status-label">Last Update:</span>
-                            <span class="status-value" id="sysLastUpdate">-</span>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">Backplane:</span>
+                            <span class="tooltip-value" id="tooltipBackplane">-</span>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label" id="tooltipValueLabel">Value:</span>
+                            <span class="tooltip-value" id="tooltipValue">-</span>
                         </div>
                     </div>
                 </div>
-
-                <div class="device-grid" id="deviceOverview">
-                    <!-- Device cards will be populated dynamically -->
-                </div>
-            </div>
-
-            <!-- Temperature Tab - SHARED CAMERA DISPLAY -->
-            <div id="temperature-tab" class="tab-content">
-                <div class="visualization-container">
-                    <h2>
-                        Temperature Display
-                        <span id="simulationIndicator" class="simulation-indicator" style="display: none;">SIMULATION MODE</span>
-                    </h2>
-                    
-                    <!-- Camera Display -->
-                    <div class="camera-display">
-                        <div style="position: relative;">
-                            <canvas id="cameraCanvas" width="800" height="600"></canvas>
-                            <div id="cameraTooltip" class="camera-tooltip" style="display: none;">
-                                <div class="tooltip-row">
-                                    <span class="tooltip-label">Module ID:</span>
-                                    <span class="tooltip-value" id="tooltipModuleId">-</span>
-                                </div>
-                                <div class="tooltip-row">
-                                    <span class="tooltip-label">Backplane:</span>
-                                    <span class="tooltip-value" id="tooltipBackplane">-</span>
-                                </div>
-                                <div class="tooltip-row">
-                                    <span class="tooltip-label" id="tooltipValueLabel">Temperature:</span>
-                                    <span class="tooltip-value" id="tooltipValue">-</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Scale Legend -->
-                        <div class="temp-scale-container">
-                            <div class="temp-scale-label">Scale:</div>
-                            <div class="temp-scale">
-                                <canvas id="tempScaleCanvas" width="400" height="30"></canvas>
-                                <div class="temp-scale-labels">
-                                    <span id="scaleMin">10°C</span>
-                                    <span id="scaleMid">20°C</span>
-                                    <span id="scaleMax">30°C</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="camera-controls">
-                            <button class="simulation-mode" id="simulationBtn" onclick="toggleSimulation()">Enable Simulation</button>
-                            <label>
-                                Color Scale:
-                                <select id="colorScale" onchange="updateColorScale()">
-                                    <option value="grayscale">Grayscale</option>
-                                    <option value="hot" selected>Hot</option>
-                                    <option value="viridis">Viridis</option>
-                                </select>
-                            </label>
-                            <label>
-                                Module:
-                                <select id="moduleSelect" onchange="selectModule()"></select>
-                            </label>
-                        </div>
-                        <div class="camera-info">
-                            <span id="pixelInfo">Hover over modules for detailed information</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Statistics -->
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-label">Average</div>
-                            <div class="stat-value" id="tempAvg">--</div>
-                            <div class="stat-unit">°C</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Minimum</div>
-                            <div class="stat-value" id="tempMin">--</div>
-                            <div class="stat-unit">°C</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Maximum</div>
-                            <div class="stat-value" id="tempMax">--</div>
-                            <div class="stat-unit">°C</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Std Dev</div>
-                            <div class="stat-value" id="tempStdDev">--</div>
-                            <div class="stat-unit">°C</div>
-                        </div>
+                
+                <!-- Color scale legend -->
+                <div class="color-scale-legend">
+                    <canvas id="tempScaleCanvas" width="400" height="30"></canvas>
+                    <div class="scale-labels">
+                        <span id="scaleMin">0</span>
+                        <span id="scaleMid">0.5</span>
+                        <span id="scaleMax">1.0</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Voltage Tab - SAME CAMERA DISPLAY, DIFFERENT DATA -->
-            <div id="voltage-tab" class="tab-content">
-                <div class="visualization-container">
-                    <h2>Voltage Display</h2>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-label">Average</div>
-                            <div class="stat-value" id="voltAvg">--</div>
-                            <div class="stat-unit">V</div>
+            <!-- Right side: Control panels -->
+            <div class="controls-section">
+                <!-- Connection status -->
+                <div class="status-bar">
+                    <div class="status-item">
+                        <span class="status-indicator" id="statusIndicator"></span>
+                        <span id="statusText">No connection</span>
+                    </div>
+                    <button class="btn-small" onclick="sendCommand('initialize')">Initialize</button>
+                    <button class="btn-small btn-danger" onclick="sendCommand('shutdown')">Shutdown</button>
+                </div>
+
+                <!-- Fan controls -->
+                <div class="control-group">
+                    <div class="control-header">
+                        <h3>Fan</h3>
+                        <span class="status-indicator"></span>
+                    </div>
+                    <div class="control-row">
+                        <div class="control-col">
+                            <label>Voltage/V</label>
+                            <div class="value-display" id="fanVoltage">None</div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Minimum</div>
-                            <div class="stat-value" id="voltMin">--</div>
-                            <div class="stat-unit">V</div>
+                        <div class="control-col">
+                            <label>Current/A</label>
+                            <div class="value-display" id="fanCurrent">None</div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Maximum</div>
-                            <div class="stat-value" id="voltMax">--</div>
-                            <div class="stat-unit">V</div>
+                    </div>
+                    <div class="button-row">
+                        <button class="btn" onclick="sendCommand('fans_on')">Fans ON</button>
+                        <button class="btn" onclick="sendCommand('fans_off')">Fans OFF</button>
+                        <button class="btn-text">None</button>
+                        <button class="btn-text">None</button>
+                    </div>
+                </div>
+
+                <!-- Chiller -->
+                <div class="control-group">
+                    <div class="control-header">
+                        <h3>Chiller</h3>
+                    </div>
+                    <div class="control-row">
+                        <div class="control-col">
+                            <label>Pressure/Pa</label>
+                            <div class="value-display" id="chillerPressure">None</div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Std Dev</div>
-                            <div class="stat-value" id="voltStdDev">--</div>
-                            <div class="stat-unit">V</div>
+                        <div class="control-col">
+                            <label>Temperature/°F</label>
+                            <div class="value-display" id="chillerTemp">None</div>
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <div class="value-display">None</div>
+                        <div class="value-display">None</div>
+                    </div>
+                </div>
+
+                <!-- Networks -->
+                <div class="control-group">
+                    <div class="control-header">
+                        <h3>Networks</h3>
+                        <button class="btn-small" onclick="checkNetworkActivity()">Check activity</button>
+                    </div>
+                    <div class="network-grid">
+                        <div class="network-item">None</div>
+                        <div class="network-item">None</div>
+                        <div class="network-item">ETH6</div>
+                        <div class="network-item">ETH7</div>
+                        <div class="network-item">None</div>
+                        <div class="network-item">None</div>
+                        <div class="network-item">ETH8</div>
+                        <div class="network-item">ETH9</div>
+                    </div>
+                </div>
+
+                <!-- Backplane -->
+                <div class="control-group">
+                    <div class="control-header">
+                        <h3>Backplane</h3>
+                    </div>
+                    <div class="control-row">
+                        <select id="backplaneSelect" class="control-select">
+                            <option>backplane/reboot_daca_1</option>
+                        </select>
+                        <button class="btn" onclick="backplaneAction()">Go</button>
+                    </div>
+                </div>
+
+                <!-- Camera Power -->
+                <div class="control-group">
+                    <div class="control-header">
+                        <h3>Camera Power</h3>
+                        <span class="status-indicator"></span>
+                    </div>
+                    <div class="button-row">
+                        <button class="btn" onclick="sendCommand('power_on')">ON</button>
+                        <button class="btn-text">ON (w/ HV)</button>
+                        <button class="btn" onclick="sendCommand('power_off')">OFF</button>
+                    </div>
+                    <div class="power-readings">
+                        <div class="reading-row">
+                            <span>Supply Current/A</span>
+                            <span id="supplyCurrent">None</span>
+                            <span>HV Current/A</span>
+                            <span id="hvCurrent">None</span>
+                        </div>
+                        <div class="reading-row">
+                            <span>Supply Nom Volts/V</span>
+                            <span id="supplyNomVolts">None</span>
+                            <span>HV Nom Volts/V</span>
+                            <span id="hvNomVolts">None</span>
+                        </div>
+                        <div class="reading-row">
+                            <span>Supply Meas Volts/V</span>
+                            <span id="supplyMeasVolts">None</span>
+                            <span>HV Meas Volts/V</span>
+                            <span id="hvMeasVolts">None</span>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Current Tab -->
-            <div id="current-tab" class="tab-content">
-                <div class="visualization-container">
-                    <h2>Current Display</h2>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-label">Average</div>
-                            <div class="stat-value" id="currentAvg">--</div>
-                            <div class="stat-unit">A</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Minimum</div>
-                            <div class="stat-value" id="currentMin">--</div>
-                            <div class="stat-unit">A</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Maximum</div>
-                            <div class="stat-value" id="currentMax">--</div>
-                            <div class="stat-unit">A</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Std Dev</div>
-                            <div class="stat-value" id="currentStdDev">--</div>
-                            <div class="stat-unit">A</div>
-                        </div>
+                <!-- Shutter control -->
+                <div class="control-group">
+                    <div class="control-header">
+                        <h3>Shutter control</h3>
+                    </div>
+                    <div class="shutter-status">
+                        <div class="status-box">Motor is On</div>
+                        <div class="status-box">Shutter is closed</div>
+                    </div>
+                    <div class="button-row">
+                        <button class="btn" onclick="sendCommand('shutter_open')">Open</button>
+                        <button class="btn" onclick="sendCommand('shutter_close')">Close</button>
                     </div>
                 </div>
             </div>
-
-            <!-- Status Tab -->
-            <div id="status-tab" class="tab-content">
-                <div class="visualization-container">
-                    <h2>Module Status Overview</h2>
-                    <div class="stats-grid">
-                        <div class="stat-card status-active">
-                            <div class="stat-label">Active</div>
-                            <div class="stat-value" id="statusActive">--</div>
-                            <div class="stat-unit">modules</div>
-                        </div>
-                        <div class="stat-card status-warning">
-                            <div class="stat-label">Warning</div>
-                            <div class="stat-value" id="statusWarning">--</div>
-                            <div class="stat-unit">modules</div>
-                        </div>
-                        <div class="stat-card status-error">
-                            <div class="stat-label">Error</div>
-                            <div class="stat-value" id="statusError">--</div>
-                            <div class="stat-unit">modules</div>
-                        </div>
-                        <div class="stat-card status-offline">
-                            <div class="stat-label">Offline</div>
-                            <div class="stat-value" id="statusOffline">--</div>
-                            <div class="stat-unit">modules</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Monitoring Tab -->
-            <div id="monitoring-tab" class="tab-content">
-                <div class="monitoring-container">
-                    <h2>
-                        Real-Time Monitoring
-                        <span id="monitoringSimIndicator" class="simulation-indicator" style="display: none;">SIMULATION MODE</span>
-                    </h2>
-                    
-                    <div class="camera-controls" style="margin-bottom: 20px;">
-                        <button class="simulation-mode" id="monitoringSimBtn" onclick="toggleMonitoringSimulation()">Enable Simulation</button>
-                    </div>
-                    
-                    <!-- Gauge Charts -->
-                    <div class="gauge-grid">
-                        <div class="gauge-card">
-                            <h3>Temperature</h3>
-                            <canvas id="tempGauge"></canvas>
-                            <div class="gauge-value" id="temperatureValue">-- °C</div>
-                        </div>
-                        <div class="gauge-card">
-                            <h3>Voltage</h3>
-                            <canvas id="voltageGauge"></canvas>
-                            <div class="gauge-value" id="voltageValue">-- V</div>
-                        </div>
-                        <div class="gauge-card">
-                            <h3>Current</h3>
-                            <canvas id="currentGauge"></canvas>
-                            <div class="gauge-value" id="currentValue">-- A</div>
-                        </div>
-                    </div>
-
-                    <!-- Time Series Plots -->
-                    <div class="plot-grid">
-                        <div class="plot-card">
-                            <h3>Temperature History</h3>
-                            <div id="tempPlot"></div>
-                        </div>
-                        <div class="plot-card">
-                            <h3>Voltage/Current History</h3>
-                            <div id="powerPlot"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Power Tab -->
-            <div id="power-tab" class="tab-content">
-                <div class="control-panel">
-                    <h2>Power Controls</h2>
-                    <div id="powerControls" class="control-grid">
-                        <!-- Power controls will be populated dynamically -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modules Tab -->
-            <div id="modules-tab" class="tab-content">
-                <div class="control-panel">
-                    <h2>Module Controls</h2>
-                    <div id="moduleControls" class="control-grid">
-                        <!-- Module controls will be populated dynamically -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Chiller Tab -->
-            <div id="chiller-tab" class="tab-content">
-                <div class="control-panel">
-                    <h2>Chiller Controls</h2>
-                    <div id="chillerControls" class="control-grid">
-                        <!-- Chiller controls will be populated dynamically -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Shutter Tab -->
-            <div id="shutter-tab" class="tab-content">
-                <div class="control-panel">
-                    <h2>Shutter Controls</h2>
-                    <div id="shutterControls" class="control-grid">
-                        <!-- Shutter controls will be populated dynamically -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Backplane Tab -->
-            <div id="backplane-tab" class="tab-content">
-                <div class="control-panel">
-                    <h2>Backplane Status</h2>
-                    <div id="backplaneStatus" class="status-grid">
-                        <!-- Backplane status will be populated dynamically -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Target Tab -->
-            <div id="target-tab" class="tab-content">
-                <div class="control-panel">
-                    <h2>Target Controls</h2>
-                    <div id="targetControls" class="control-grid">
-                        <!-- Target controls will be populated dynamically -->
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <!-- Alert/Message Area -->
-        <div id="alertContainer" class="alert-container"></div>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/camera_viz.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/monitoring.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
