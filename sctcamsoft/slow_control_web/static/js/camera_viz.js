@@ -3,12 +3,12 @@
  * 
  * Handles Canvas-based camera display with proper SCT structure.
  * Now supports multiple data types: temperature, voltage, current, and status.
- * The camera display is shared across tabs by moving DOM elements.
+ * Responsive canvas sizing.
  * Circular aperture created by removing corner modules.
  * 
  * @module CameraVisualization
  * @author SCT Camera Team
- * @version 2.2.0
+ * @version 2.3.0
  */
 
 class CameraVisualization {
@@ -28,7 +28,7 @@ class CameraVisualization {
         this.simulationTime = 0;
         
         // Current data type being displayed
-        this.dataType = 'temperature';  // 'temperature', 'voltage', 'current', 'status'
+        this.dataType = 'temperature';
         
         // SCT Camera structure
         this.numBackplanes = 9;
@@ -37,9 +37,9 @@ class CameraVisualization {
         this.modulesPerRow = 5;
         this.totalModules = 225;
         
-        // Visual parameters
-        this.moduleSize = 64;
-        this.backplaneGap = 16;
+        // Visual parameters - will be scaled based on container
+        this.baseModuleSize = 64;
+        this.baseBackplaneGap = 16;
         this.gridLineWidth = 1;
         this.backplaneLineWidth = 3;
         
@@ -66,69 +66,85 @@ class CameraVisualization {
         this.setupEventListeners();
         this.initTempScaleLegend();
         this.initialized = true;
+        
+        // Handle window resize
+        window.addEventListener('resize', () => this.handleResize());
+    }
+
+    handleResize() {
+        this.setupCanvas();
+        this.drawCamera();
     }
 
     /**
      * Define which modules are inactive to create circular aperture
-     * Removes corners from the 4 corner backplanes
      */
     defineInactiveModules() {
         const inactive = new Set();
         
-        // Helper function to get module ID from backplane and position
         const getModuleId = (backplaneId, row, col) => {
             return backplaneId * 25 + row * 5 + col;
         };
         
         // Top-left corner (backplane 0)
-        // Remove: top 5, then 3, 2, 1, 1 from left side
-        for (let col = 0; col < 5; col++) inactive.add(getModuleId(0, 0, col)); // Row 0: all 5
-        for (let col = 0; col < 3; col++) inactive.add(getModuleId(0, 1, col)); // Row 1: left 3
-        for (let col = 0; col < 2; col++) inactive.add(getModuleId(0, 2, col)); // Row 2: left 2
-        inactive.add(getModuleId(0, 3, 0)); // Row 3: left 1
-        inactive.add(getModuleId(0, 4, 0)); // Row 4: left 1
+        for (let col = 0; col < 5; col++) inactive.add(getModuleId(0, 0, col));
+        for (let col = 0; col < 3; col++) inactive.add(getModuleId(0, 1, col));
+        for (let col = 0; col < 2; col++) inactive.add(getModuleId(0, 2, col));
+        inactive.add(getModuleId(0, 3, 0));
+        inactive.add(getModuleId(0, 4, 0));
         
         // Top-right corner (backplane 2)
-        // Remove: top 5, then 3, 2, 1, 1 from right side
-        for (let col = 0; col < 5; col++) inactive.add(getModuleId(2, 0, col)); // Row 0: all 5
-        for (let col = 2; col < 5; col++) inactive.add(getModuleId(2, 1, col)); // Row 1: right 3
-        for (let col = 3; col < 5; col++) inactive.add(getModuleId(2, 2, col)); // Row 2: right 2
-        inactive.add(getModuleId(2, 3, 4)); // Row 3: right 1
-        inactive.add(getModuleId(2, 4, 4)); // Row 4: right 1
+        for (let col = 0; col < 5; col++) inactive.add(getModuleId(2, 0, col));
+        for (let col = 2; col < 5; col++) inactive.add(getModuleId(2, 1, col));
+        for (let col = 3; col < 5; col++) inactive.add(getModuleId(2, 2, col));
+        inactive.add(getModuleId(2, 3, 4));
+        inactive.add(getModuleId(2, 4, 4));
         
         // Bottom-left corner (backplane 6)
-        // Remove: bottom 5, then 3, 2, 1, 1 from left side (mirrored)
-        inactive.add(getModuleId(6, 0, 0)); // Row 0: left 1
-        inactive.add(getModuleId(6, 1, 0)); // Row 1: left 1
-        for (let col = 0; col < 2; col++) inactive.add(getModuleId(6, 2, col)); // Row 2: left 2
-        for (let col = 0; col < 3; col++) inactive.add(getModuleId(6, 3, col)); // Row 3: left 3
-        for (let col = 0; col < 5; col++) inactive.add(getModuleId(6, 4, col)); // Row 4: all 5
+        inactive.add(getModuleId(6, 0, 0));
+        inactive.add(getModuleId(6, 1, 0));
+        for (let col = 0; col < 2; col++) inactive.add(getModuleId(6, 2, col));
+        for (let col = 0; col < 3; col++) inactive.add(getModuleId(6, 3, col));
+        for (let col = 0; col < 5; col++) inactive.add(getModuleId(6, 4, col));
         
         // Bottom-right corner (backplane 8)
-        // Remove: bottom 5, then 3, 2, 1, 1 from right side (mirrored)
-        inactive.add(getModuleId(8, 0, 4)); // Row 0: right 1
-        inactive.add(getModuleId(8, 1, 4)); // Row 1: right 1
-        for (let col = 3; col < 5; col++) inactive.add(getModuleId(8, 2, col)); // Row 2: right 2
-        for (let col = 2; col < 5; col++) inactive.add(getModuleId(8, 3, col)); // Row 3: right 3
-        for (let col = 0; col < 5; col++) inactive.add(getModuleId(8, 4, col)); // Row 4: all 5
+        inactive.add(getModuleId(8, 0, 4));
+        inactive.add(getModuleId(8, 1, 4));
+        for (let col = 3; col < 5; col++) inactive.add(getModuleId(8, 2, col));
+        for (let col = 2; col < 5; col++) inactive.add(getModuleId(8, 3, col));
+        for (let col = 0; col < 5; col++) inactive.add(getModuleId(8, 4, col));
         
         return inactive;
     }
 
-    /**
-     * Check if a module is active (not in circular aperture cutout)
-     */
     isModuleActive(moduleId) {
         return !this.inactiveModules.has(moduleId);
     }
 
     setupCanvas() {
+        // Get container width and calculate appropriate size
+        const container = this.canvas.parentElement;
+        const maxWidth = Math.min(container.clientWidth - 40, 900);
+        
+        // Calculate module size to fit container
         const modulesAcross = this.modulesPerRow * this.backplanesPerRow;
         const gapsAcross = this.backplanesPerRow - 1;
-        this.canvas.width = modulesAcross * this.moduleSize + gapsAcross * this.backplaneGap;
-        this.canvas.height = this.canvas.width;
-        this.width = this.canvas.width;
-        this.height = this.canvas.height;
+        
+        this.moduleSize = Math.floor((maxWidth - (gapsAcross * this.baseBackplaneGap)) / modulesAcross);
+        this.backplaneGap = this.baseBackplaneGap;
+        
+        const canvasSize = modulesAcross * this.moduleSize + gapsAcross * this.backplaneGap;
+        
+        // Set canvas resolution
+        this.canvas.width = canvasSize;
+        this.canvas.height = canvasSize;
+        
+        // Also set CSS size for crisp rendering
+        this.canvas.style.width = canvasSize + 'px';
+        this.canvas.style.height = canvasSize + 'px';
+        
+        this.width = canvasSize;
+        this.height = canvasSize;
     }
 
     setupEventListeners() {
@@ -142,10 +158,6 @@ class CameraVisualization {
         this.canvas.addEventListener('mouseleave', () => {
             if (this.tooltip) {
                 this.tooltip.style.display = 'none';
-            }
-            const infoElement = document.getElementById('pixelInfo');
-            if (infoElement) {
-                infoElement.textContent = 'Hover over modules for detailed information';
             }
         });
         
@@ -170,7 +182,6 @@ class CameraVisualization {
         
         this.updateTempScaleLegend();
         this.drawCamera();
-        this.updateStatistics();
     }
 
     showTooltip(clientX, clientY, canvasX, canvasY) {
@@ -201,21 +212,8 @@ class CameraVisualization {
             this.tooltip.style.display = 'block';
             this.tooltip.style.left = (clientX + 15) + 'px';
             this.tooltip.style.top = (clientY + 15) + 'px';
-            
-            const infoElement = document.getElementById('pixelInfo');
-            if (infoElement) {
-                const valueStr = this.dataType === 'status' ? value.toUpperCase() : `${value.toFixed(2)} ${unit}`;
-                infoElement.textContent = `Module ${moduleId} | ` +
-                    `Backplane ${pos.backplaneId} | ` +
-                    `Position (${pos.modRow},${pos.modCol}) | ` +
-                    `${this.ranges[this.dataType].label}: ${valueStr}`;
-            }
         } else {
             this.tooltip.style.display = 'none';
-            const infoElement = document.getElementById('pixelInfo');
-            if (infoElement) {
-                infoElement.textContent = 'Hover over modules for detailed information';
-            }
         }
     }
 
@@ -325,15 +323,13 @@ class CameraVisualization {
     drawCamera() {
         if (!this.canvas) return;
         
-        this.ctx.fillStyle = '#1a1a1a';
+        this.ctx.fillStyle = '#0a0a0a';
         this.ctx.fillRect(0, 0, this.width, this.height);
         
         for (let i = 0; i < this.totalModules; i++) {
-            // Skip inactive modules (circular aperture)
             if (!this.isModuleActive(i)) {
                 const pos = this.getModulePosition(i);
-                // Draw inactive modules as dark gray
-                this.ctx.fillStyle = '#0a0a0a';
+                this.ctx.fillStyle = '#050505';
                 this.ctx.fillRect(pos.x, pos.y, this.moduleSize, this.moduleSize);
                 continue;
             }
@@ -372,7 +368,7 @@ class CameraVisualization {
     }
 
     drawGrid() {
-        this.ctx.strokeStyle = '#666';
+        this.ctx.strokeStyle = '#333';
         this.ctx.lineWidth = this.gridLineWidth;
         const sizeWithGap = this.modulesPerRow * this.moduleSize + this.backplaneGap;
         
@@ -460,29 +456,15 @@ class CameraVisualization {
     selectModule(moduleId) {
         if (moduleId < 0 || moduleId >= this.totalModules || !this.isModuleActive(moduleId)) return;
         this.currentModule = moduleId;
-        const select = document.getElementById('moduleSelect');
-        if (select) select.value = moduleId;
         this.drawCamera();
     }
 
     toggleSimulation() {
         this.simulationMode = !this.simulationMode;
-        const btn = document.getElementById('simulationBtn');
-        const indicator = document.getElementById('simulationIndicator');
         
         if (this.simulationMode) {
-            if (btn) {
-                btn.textContent = 'Disable Simulation';
-                btn.classList.add('active');
-            }
-            if (indicator) indicator.style.display = 'inline-block';
             this.startSimulation();
         } else {
-            if (btn) {
-                btn.textContent = 'Enable Simulation';
-                btn.classList.remove('active');
-            }
-            if (indicator) indicator.style.display = 'none';
             this.stopSimulation();
         }
     }
@@ -493,7 +475,6 @@ class CameraVisualization {
             this.simulationTime += 0.05;
             this.updateSimulation();
             this.drawCamera();
-            this.updateStatistics();
         }, 50);
     }
 
@@ -506,7 +487,6 @@ class CameraVisualization {
 
     updateSimulation() {
         for (let i = 0; i < this.totalModules; i++) {
-            // Skip inactive modules
             if (!this.isModuleActive(i)) continue;
             
             const pos = this.getModulePosition(i);
@@ -539,7 +519,7 @@ class CameraVisualization {
             curr += (Math.random() - 0.5) * 0.15;
             this.currents[i] = this.currents[i] * 0.9 + curr * 0.1;
             
-            // Status simulation (occasional errors)
+            // Status simulation
             if (Math.random() < 0.001) {
                 const statuses = ['active', 'warning', 'error', 'offline'];
                 this.statuses[i] = statuses[Math.floor(Math.random() * statuses.length)];
@@ -548,111 +528,18 @@ class CameraVisualization {
             }
         }
     }
-
-    updateStatistics() {
-        const prefix = this.dataType === 'temperature' ? 'temp' :
-                      this.dataType === 'voltage' ? 'volt' :
-                      this.dataType === 'current' ? 'current' : 'status';
-        
-        if (this.dataType === 'status') {
-            const counts = { active: 0, warning: 0, error: 0, offline: 0 };
-            for (let i = 0; i < this.totalModules; i++) {
-                if (this.isModuleActive(i)) {
-                    counts[this.statuses[i]]++;
-                }
-            }
-            
-            const setVal = (id, val) => {
-                const el = document.getElementById(id);
-                if (el) el.textContent = val;
-            };
-            
-            setVal('statusActive', counts.active);
-            setVal('statusWarning', counts.warning);
-            setVal('statusError', counts.error);
-            setVal('statusOffline', counts.offline);
-        } else {
-            const data = this.dataType === 'temperature' ? this.temperatures :
-                        this.dataType === 'voltage' ? this.voltages : this.currents;
-            
-            // Only use active modules for statistics
-            const activeData = data.filter((val, idx) => this.isModuleActive(idx));
-            
-            const avg = activeData.reduce((a, b) => a + b, 0) / activeData.length;
-            const min = Math.min(...activeData);
-            const max = Math.max(...activeData);
-            const variance = activeData.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / activeData.length;
-            const stdDev = Math.sqrt(variance);
-            
-            const setVal = (id, val) => {
-                const el = document.getElementById(id);
-                if (el) el.textContent = val.toFixed(2);
-            };
-            
-            setVal(prefix + 'Avg', avg);
-            setVal(prefix + 'Min', min);
-            setVal(prefix + 'Max', max);
-            setVal(prefix + 'StdDev', stdDev);
-        }
-    }
 }
 
 let cameraViz;
-let cameraInitialized = false;
 
 function initCameraVisualization() {
-    if (document.getElementById('cameraCanvas') && !cameraInitialized) {
+    const canvas = document.getElementById('cameraCanvas');
+    if (canvas && !window.cameraInitialized) {
         cameraViz = new CameraVisualization('cameraCanvas');
         if (cameraViz.initialized) {
-            populateModuleSelector();
             cameraViz.drawCamera();
-            cameraViz.updateStatistics();
-            cameraInitialized = true;
+            window.cameraViz = cameraViz;
+            window.cameraInitialized = true;
         }
-    }
-}
-
-function populateModuleSelector() {
-    const select = document.getElementById('moduleSelect');
-    if (!select) return;
-    select.innerHTML = '';
-    for (let i = 0; i < 225; i++) {
-        // Only add active modules to selector
-        if (cameraViz.isModuleActive(i)) {
-            const backplane = Math.floor(i / 25);
-            const moduleInBp = i % 25;
-            const option = document.createElement('option');
-            option.value = i;
-            option.textContent = `Module ${i} (BP ${backplane}, Mod ${moduleInBp})`;
-            select.appendChild(option);
-        }
-    }
-}
-
-function updateCameraDisplay() {
-    if (!cameraViz) return;
-    if (!cameraViz.simulationMode) {
-        console.log('Fetching real camera data...');
-    }
-}
-
-function updateColorScale() {
-    if (!cameraViz) return;
-    const select = document.getElementById('colorScale');
-    if (select) cameraViz.setColorScale(select.value);
-}
-
-function selectModule() {
-    if (!cameraViz) return;
-    const select = document.getElementById('moduleSelect');
-    if (select) cameraViz.selectModule(parseInt(select.value));
-}
-
-function toggleSimulation() {
-    if (!cameraViz) {
-        initCameraVisualization();
-    }
-    if (cameraViz) {
-        cameraViz.toggleSimulation();
     }
 }
