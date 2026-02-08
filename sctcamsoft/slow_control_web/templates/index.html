@@ -43,6 +43,13 @@
                         Enable Simulation
                     </button>
                     <span class="simulation-indicator" id="simulationIndicator">SIMULATION MODE</span>
+                    
+                    <label for="colormapSelect" style="font-size: 12px; color: #aaa; margin-left: 20px;">Colormap:</label>
+                    <select id="colormapSelect" onchange="changeColormap()">
+                        <option value="hot">Hot</option>
+                        <option value="viridis">Viridis</option>
+                        <option value="grayscale">Grayscale</option>
+                    </select>
                 </div>
 
                 <div class="camera-display-main">
