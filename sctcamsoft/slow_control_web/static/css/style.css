@@ -1,6 +1,6 @@
 /**
  * Main Styles for SCT Camera Slow Control Interface
- * Two-column layout: Camera on left, controls on right
+ * Dark theme with responsive camera display
  */
 
 * {
@@ -11,8 +11,8 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-    background: #e8e8e8;
-    color: #333;
+    background: #1a1a1a;
+    color: #e0e0e0;
 }
 
 .main-container {
@@ -23,18 +23,18 @@ body {
 
 /* Header */
 header {
-    background: #d0d0d0;
-    padding: 8px 16px;
+    background: #2a2a2a;
+    padding: 10px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #999;
+    border-bottom: 1px solid #444;
 }
 
 header h1 {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
-    color: #333;
+    color: #e0e0e0;
 }
 
 .connection-status {
@@ -47,7 +47,7 @@ header h1 {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #ccc;
+    background: #666;
 }
 
 .status-indicator.connected {
@@ -59,58 +59,62 @@ header h1 {
 }
 
 .connection-status span {
-    font-size: 12px;
-    color: #666;
+    font-size: 13px;
+    color: #aaa;
 }
 
 .header-button {
     padding: 6px 16px;
-    background: #fff;
-    border: 1px solid #999;
+    background: #3a3a3a;
+    border: 1px solid #555;
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
     font-weight: 500;
+    color: #e0e0e0;
+    transition: background 0.2s;
 }
 
 .header-button:hover {
-    background: #f0f0f0;
+    background: #4a4a4a;
 }
 
 .header-button.danger {
-    color: #f44336;
+    color: #ff6b6b;
 }
 
 /* Camera Tabs */
 .camera-tabs {
     display: flex;
     gap: 0;
-    background: #e8e8e8;
+    background: #1a1a1a;
     padding: 4px 16px;
-    border-bottom: 1px solid #ccc;
+    border-bottom: 1px solid #444;
 }
 
 .camera-tab-button {
     padding: 8px 20px;
-    background: #d8d8d8;
-    border: 1px solid #aaa;
+    background: #2a2a2a;
+    border: 1px solid #444;
     border-bottom: none;
     border-radius: 6px 6px 0 0;
     cursor: pointer;
     font-size: 13px;
     font-weight: 500;
-    color: #555;
+    color: #aaa;
     margin-right: -1px;
+    transition: all 0.2s;
 }
 
 .camera-tab-button:hover {
-    background: #e0e0e0;
+    background: #3a3a3a;
+    color: #e0e0e0;
 }
 
 .camera-tab-button.active {
-    background: #5a9fd4;
-    color: white;
-    border-color: #5a9fd4;
+    background: #4ecdc4;
+    color: #1a1a1a;
+    border-color: #4ecdc4;
     z-index: 1;
 }
 
@@ -124,32 +128,80 @@ header h1 {
 /* Left Side: Camera Display */
 .camera-section {
     flex: 1;
-    background: white;
+    background: #1a1a1a;
     padding: 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
     overflow-y: auto;
-    border-right: 1px solid #ccc;
+    border-right: 1px solid #333;
 }
 
 .camera-display-main {
     position: relative;
     margin-bottom: 20px;
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    justify-content: center;
 }
 
 .camera-display-main canvas {
-    border: 1px solid #ccc;
+    border: 2px solid #4ecdc4;
     display: block;
-    max-width: 100%;
+    width: 100%;
     height: auto;
+    max-width: 100%;
+}
+
+/* Simulation Controls */
+.simulation-controls {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.simulation-button {
+    padding: 8px 20px;
+    background: #3a3a3a;
+    border: 1px solid #555;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #e0e0e0;
+    transition: all 0.2s;
+}
+
+.simulation-button:hover {
+    background: #4a4a4a;
+}
+
+.simulation-button.active {
+    background: #ff6b6b;
+    border-color: #ff6b6b;
+    color: white;
+}
+
+.simulation-indicator {
+    font-size: 12px;
+    color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.2);
+    padding: 6px 12px;
+    border-radius: 4px;
+    display: none;
+}
+
+.simulation-indicator.active {
+    display: inline-block;
 }
 
 /* Scale Legend */
 .scale-legend {
     width: 100%;
-    max-width: 800px;
+    max-width: 900px;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -157,38 +209,38 @@ header h1 {
 
 .scale-legend canvas {
     width: 100%;
-    border: 1px solid #ccc;
+    border: 1px solid #444;
+    border-radius: 4px;
 }
 
 .scale-labels {
     display: flex;
     justify-content: space-between;
-    font-size: 11px;
-    color: #666;
+    font-size: 12px;
+    color: #aaa;
 }
 
 /* Right Side: Controls */
 .control-section {
-    width: 450px;
-    background: #f8f8f8;
+    width: 400px;
+    background: #222;
     padding: 16px;
     overflow-y: auto;
-    border: 2px dashed #ff0000;
 }
 
 .control-group {
-    background: white;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    padding: 12px;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 14px;
     margin-bottom: 16px;
 }
 
 .control-group h3 {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
-    margin-bottom: 10px;
-    color: #333;
+    margin-bottom: 12px;
+    color: #4ecdc4;
 }
 
 .control-row {
@@ -204,17 +256,19 @@ header h1 {
 
 .control-row button {
     flex: 1;
-    padding: 6px 12px;
-    background: #e8e8e8;
-    border: 1px solid #999;
+    padding: 7px 12px;
+    background: #3a3a3a;
+    border: 1px solid #555;
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
     font-weight: 500;
+    color: #e0e0e0;
+    transition: background 0.2s;
 }
 
 .control-row button:hover {
-    background: #d8d8d8;
+    background: #4a4a4a;
 }
 
 .info-field {
@@ -226,13 +280,13 @@ header h1 {
 
 .info-field label {
     font-size: 11px;
-    color: #666;
+    color: #888;
 }
 
 .info-field span {
     font-size: 12px;
     font-weight: 500;
-    color: #333;
+    color: #e0e0e0;
 }
 
 /* Network Grid */
@@ -247,20 +301,21 @@ header h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px;
-    background: #f0f0f0;
-    border: 1px solid #ddd;
-    border-radius: 3px;
+    padding: 6px 8px;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 4px;
 }
 
 .network-item label {
     font-size: 11px;
     font-weight: 600;
+    color: #aaa;
 }
 
 .network-item span {
     font-size: 11px;
-    color: #666;
+    color: #e0e0e0;
 }
 
 /* Power Grid */
@@ -275,67 +330,70 @@ header h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px;
-    background: #f0f0f0;
-    border: 1px solid #ddd;
-    border-radius: 3px;
+    padding: 6px 8px;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 4px;
 }
 
 .power-item label {
     font-size: 10px;
-    color: #666;
+    color: #888;
 }
 
 .power-item span {
     font-size: 11px;
     font-weight: 500;
-    color: #333;
+    color: #e0e0e0;
 }
 
 .status-indicator-small {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #ccc;
+    background: #444;
     flex-shrink: 0;
 }
 
 /* Backplane Select */
 #backplaneSelect {
     flex: 1;
-    padding: 6px;
-    border: 1px solid #999;
+    padding: 7px;
+    border: 1px solid #555;
     border-radius: 4px;
     font-size: 11px;
-    background: white;
+    background: #1a1a1a;
+    color: #e0e0e0;
 }
 
 /* Shutter Bar */
 .shutter-bar {
     height: 20px;
-    background: black;
+    background: #000;
+    border: 1px solid #444;
     border-radius: 4px;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 /* Tooltip */
 .camera-tooltip {
     position: fixed;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.95);
     color: white;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-size: 11px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 12px;
     pointer-events: none;
     z-index: 1000;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    border: 1px solid #4ecdc4;
 }
 
 .tooltip-row {
     display: flex;
     justify-content: space-between;
-    gap: 12px;
-    margin: 3px 0;
+    gap: 16px;
+    margin: 4px 0;
 }
 
 .tooltip-label {
@@ -348,6 +406,12 @@ header h1 {
 }
 
 /* Responsive */
+@media (max-width: 1400px) {
+    .control-section {
+        width: 350px;
+    }
+}
+
 @media (max-width: 1200px) {
     .content-layout {
         flex-direction: column;
@@ -356,6 +420,6 @@ header h1 {
     .control-section {
         width: 100%;
         border-right: none;
-        border-top: 1px solid #ccc;
+        border-top: 1px solid #333;
     }
 }
