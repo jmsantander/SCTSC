@@ -212,6 +212,27 @@ header h1 {
     display: inline-block;
 }
 
+/* Colormap Selector */
+#colormapSelect {
+    padding: 6px 12px;
+    background: #3a3a3a;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #e0e0e0;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#colormapSelect:hover {
+    background: #4a4a4a;
+}
+
+#colormapSelect:focus {
+    outline: none;
+    border-color: #4ecdc4;
+}
+
 /* Scale Legend */
 .scale-legend {
     width: 100%;
