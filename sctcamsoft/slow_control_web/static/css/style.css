@@ -1,6 +1,6 @@
 /**
- * SCT Slow Control GUI - Main Styles
- * Single page layout: camera on left, controls on right
+ * Main Styles for SCT Camera Slow Control Interface
+ * Two-column layout: Camera on left, controls on right
  */
 
 * {
@@ -10,13 +10,11 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-    background: #f0f0f0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    background: #e8e8e8;
     color: #333;
-    overflow-x: hidden;
 }
 
-/* Main container */
 .main-container {
     display: flex;
     flex-direction: column;
@@ -24,65 +22,116 @@ body {
 }
 
 /* Header */
-.header {
-    background: #e0e0e0;
-    border-bottom: 1px solid #999;
-    padding: 8px 15px;
+header {
+    background: #d0d0d0;
+    padding: 8px 16px;
     display: flex;
-    align-items: center;
     justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #999;
 }
 
-.header-title {
+header h1 {
     font-size: 14px;
     font-weight: 600;
     color: #333;
 }
 
-/* Camera view tabs */
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ccc;
+}
+
+.status-indicator.connected {
+    background: #4caf50;
+}
+
+.status-indicator.disconnected {
+    background: #f44336;
+}
+
+.connection-status span {
+    font-size: 12px;
+    color: #666;
+}
+
+.header-button {
+    padding: 6px 16px;
+    background: #fff;
+    border: 1px solid #999;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.header-button:hover {
+    background: #f0f0f0;
+}
+
+.header-button.danger {
+    color: #f44336;
+}
+
+/* Camera Tabs */
 .camera-tabs {
     display: flex;
-    gap: 2px;
+    gap: 0;
+    background: #e8e8e8;
+    padding: 4px 16px;
+    border-bottom: 1px solid #ccc;
 }
 
 .camera-tab-button {
-    background: #d0d0d0;
-    border: 1px solid #999;
+    padding: 8px 20px;
+    background: #d8d8d8;
+    border: 1px solid #aaa;
+    border-bottom: none;
     border-radius: 6px 6px 0 0;
-    padding: 6px 20px;
-    font-size: 13px;
     cursor: pointer;
-    transition: all 0.2s;
-    color: #333;
+    font-size: 13px;
+    font-weight: 500;
+    color: #555;
+    margin-right: -1px;
 }
 
 .camera-tab-button:hover {
-    background: #c0c0c0;
+    background: #e0e0e0;
 }
 
 .camera-tab-button.active {
-    background: #4a9eff;
+    background: #5a9fd4;
     color: white;
-    border-color: #3080dd;
+    border-color: #5a9fd4;
+    z-index: 1;
 }
 
-/* Content area - split left/right */
-.content-area {
+/* Main Content Layout */
+.content-layout {
     display: flex;
     flex: 1;
     overflow: hidden;
 }
 
-/* Left side: Camera */
+/* Left Side: Camera Display */
 .camera-section {
-    flex: 0 0 850px;
+    flex: 1;
     background: white;
-    border-right: 1px solid #ccc;
+    padding: 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 20px;
+    justify-content: flex-start;
     overflow-y: auto;
+    border-right: 1px solid #ccc;
 }
 
 .camera-display-main {
@@ -91,295 +140,222 @@ body {
 }
 
 .camera-display-main canvas {
-    border: 2px solid #999;
-    background: #1a1a1a;
-    cursor: crosshair;
+    border: 1px solid #ccc;
+    display: block;
+    max-width: 100%;
+    height: auto;
 }
 
-/* Color scale legend */
-.color-scale-legend {
+/* Scale Legend */
+.scale-legend {
     width: 100%;
-    max-width: 600px;
-    margin-top: 15px;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
-.color-scale-legend canvas {
+.scale-legend canvas {
     width: 100%;
-    height: 30px;
-    border: 1px solid #999;
+    border: 1px solid #ccc;
 }
 
 .scale-labels {
     display: flex;
     justify-content: space-between;
-    margin-top: 5px;
-    font-size: 12px;
+    font-size: 11px;
     color: #666;
 }
 
-/* Right side: Controls */
-.controls-section {
-    flex: 1;
-    background: #f5f5f5;
+/* Right Side: Controls */
+.control-section {
+    width: 450px;
+    background: #f8f8f8;
+    padding: 16px;
     overflow-y: auto;
-    padding: 15px;
-}
-
-/* Status bar */
-.status-bar {
-    background: white;
     border: 2px dashed #ff0000;
-    border-radius: 4px;
-    padding: 10px 15px;
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-    gap: 15px;
 }
 
-.status-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-}
-
-.status-indicator {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #666;
-    display: inline-block;
-}
-
-.status-indicator.connected {
-    background: #4ade80;
-}
-
-.status-indicator.disconnected {
-    background: #ef4444;
-}
-
-/* Control groups */
 .control-group {
     background: white;
     border: 1px solid #ccc;
     border-radius: 4px;
     padding: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
 }
 
-.control-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #e0e0e0;
-}
-
-.control-header h3 {
-    font-size: 14px;
+.control-group h3 {
+    font-size: 13px;
     font-weight: 600;
+    margin-bottom: 10px;
     color: #333;
-    margin: 0;
 }
 
-/* Control rows and columns */
 .control-row {
     display: flex;
-    gap: 10px;
+    gap: 8px;
+    align-items: center;
     margin-bottom: 8px;
 }
 
-.control-col {
+.control-row:last-child {
+    margin-bottom: 0;
+}
+
+.control-row button {
     flex: 1;
-}
-
-.control-col label {
-    display: block;
-    font-size: 11px;
-    color: #666;
-    margin-bottom: 4px;
-}
-
-.value-display {
-    background: #f9f9f9;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    padding: 6px 10px;
-    font-size: 13px;
-    text-align: center;
-    color: #333;
-}
-
-/* Buttons */
-.button-row {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.btn, .btn-small, .btn-text, .btn-danger {
+    padding: 6px 12px;
+    background: #e8e8e8;
     border: 1px solid #999;
     border-radius: 4px;
-    padding: 6px 12px;
-    font-size: 12px;
     cursor: pointer;
-    transition: all 0.2s;
-    background: linear-gradient(to bottom, #f8f8f8, #e0e0e0);
-    color: #333;
-}
-
-.btn:hover, .btn-small:hover {
-    background: linear-gradient(to bottom, #e8e8e8, #d0d0d0);
-}
-
-.btn:active, .btn-small:active {
-    background: linear-gradient(to bottom, #d0d0d0, #c0c0c0);
-}
-
-.btn {
-    flex: 1;
-}
-
-.btn-small {
-    padding: 4px 10px;
-    font-size: 11px;
-}
-
-.btn-danger {
-    background: linear-gradient(to bottom, #ff6b6b, #ee5555);
-    color: white;
-    border-color: #cc4444;
-}
-
-.btn-danger:hover {
-    background: linear-gradient(to bottom, #ee5555, #dd4444);
-}
-
-.btn-text {
-    background: transparent;
-    border-color: transparent;
-    color: #999;
-    cursor: default;
-}
-
-/* Networks grid */
-.network-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-}
-
-.network-item {
-    background: #f9f9f9;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    padding: 8px;
-    text-align: center;
     font-size: 12px;
-    color: #333;
-}
-
-/* Backplane select */
-.control-select {
-    flex: 1;
-    border: 1px solid #999;
-    border-radius: 3px;
-    padding: 6px 10px;
-    font-size: 12px;
-    background: white;
-    color: #333;
-}
-
-/* Power readings */
-.power-readings {
-    margin-top: 10px;
-}
-
-.reading-row {
-    display: grid;
-    grid-template-columns: 1.2fr 0.8fr 1.2fr 0.8fr;
-    gap: 8px;
-    margin-bottom: 6px;
-    font-size: 11px;
-    align-items: center;
-}
-
-.reading-row span:nth-child(odd) {
-    color: #666;
-    text-align: right;
-}
-
-.reading-row span:nth-child(even) {
-    color: #333;
     font-weight: 500;
 }
 
-/* Shutter status */
-.shutter-status {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 10px;
+.control-row button:hover {
+    background: #d8d8d8;
 }
 
-.status-box {
+.info-field {
     flex: 1;
-    background: #2a2a2a;
-    color: white;
-    padding: 8px;
-    border-radius: 3px;
-    text-align: center;
-    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
-/* Camera tooltip */
+.info-field label {
+    font-size: 11px;
+    color: #666;
+}
+
+.info-field span {
+    font-size: 12px;
+    font-weight: 500;
+    color: #333;
+}
+
+/* Network Grid */
+.network-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.network-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px;
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+
+.network-item label {
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.network-item span {
+    font-size: 11px;
+    color: #666;
+}
+
+/* Power Grid */
+.power-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.power-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px;
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+
+.power-item label {
+    font-size: 10px;
+    color: #666;
+}
+
+.power-item span {
+    font-size: 11px;
+    font-weight: 500;
+    color: #333;
+}
+
+.status-indicator-small {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ccc;
+    flex-shrink: 0;
+}
+
+/* Backplane Select */
+#backplaneSelect {
+    flex: 1;
+    padding: 6px;
+    border: 1px solid #999;
+    border-radius: 4px;
+    font-size: 11px;
+    background: white;
+}
+
+/* Shutter Bar */
+.shutter-bar {
+    height: 20px;
+    background: black;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+/* Tooltip */
 .camera-tooltip {
     position: fixed;
     background: rgba(0, 0, 0, 0.9);
-    border: 1px solid #4a9eff;
+    color: white;
+    padding: 8px 12px;
     border-radius: 4px;
-    padding: 10px;
-    color: #fff;
-    font-size: 12px;
+    font-size: 11px;
     pointer-events: none;
     z-index: 1000;
-    min-width: 180px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .tooltip-row {
     display: flex;
     justify-content: space-between;
-    margin: 4px 0;
+    gap: 12px;
+    margin: 3px 0;
 }
 
 .tooltip-label {
     color: #aaa;
-    margin-right: 10px;
 }
 
 .tooltip-value {
-    color: #4a9eff;
-    font-weight: bold;
+    color: #4ecdc4;
+    font-weight: 600;
 }
 
-/* Responsive adjustments */
+/* Responsive */
 @media (max-width: 1200px) {
-    .camera-section {
-        flex: 0 0 600px;
-    }
-}
-
-@media (max-width: 900px) {
-    .content-area {
+    .content-layout {
         flex-direction: column;
     }
     
-    .camera-section {
-        flex: none;
+    .control-section {
         width: 100%;
         border-right: none;
-        border-bottom: 1px solid #ccc;
+        border-top: 1px solid #ccc;
     }
 }
