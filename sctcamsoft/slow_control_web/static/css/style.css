@@ -1,6 +1,6 @@
 /**
  * Main Styles for SCT Camera Slow Control Interface
- * Dark theme with responsive camera display
+ * Dark theme with responsive camera display that fits viewport height
  */
 
 * {
@@ -13,18 +13,20 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     background: #1a1a1a;
     color: #e0e0e0;
+    overflow: hidden;
 }
 
 .main-container {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    overflow: hidden;
 }
 
 /* Header */
 header {
     background: #2a2a2a;
-    padding: 10px 16px;
+    padding: 8px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -65,7 +67,7 @@ header h1 {
 }
 
 .header-button {
-    padding: 6px 16px;
+    padding: 5px 14px;
     background: #3a3a3a;
     border: 1px solid #555;
     border-radius: 4px;
@@ -95,7 +97,7 @@ header h1 {
 }
 
 .camera-tab-button {
-    padding: 8px 20px;
+    padding: 6px 18px;
     background: #2a2a2a;
     border: 1px solid #444;
     border-bottom: none;
@@ -132,38 +134,43 @@ header h1 {
 .camera-section {
     flex: 1;
     background: #1a1a1a;
-    padding: 20px;
+    padding: 12px 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
-    overflow-y: auto;
+    justify-content: center;
+    overflow: hidden;
     border-right: 1px solid #333;
     min-width: 0;
+    min-height: 0;
 }
 
 .camera-display-main {
     position: relative;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     width: 100%;
     max-width: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-shrink: 1;
+    min-height: 0;
 }
 
 .camera-display-main canvas {
     border: 2px solid #4ecdc4;
     display: block;
-    /* Make canvas responsive - key change */
-    width: 100% !important;
+    /* Make canvas responsive - fit to height */
+    max-width: 100%;
+    max-height: calc(100vh - 250px);
+    width: auto !important;
     height: auto !important;
-    max-width: 800px;
+    object-fit: contain;
 }
 
 /* Simulation Controls */
 .simulation-controls {
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     display: flex;
     gap: 12px;
     align-items: center;
@@ -171,12 +178,12 @@ header h1 {
 }
 
 .simulation-button {
-    padding: 8px 20px;
+    padding: 6px 18px;
     background: #3a3a3a;
     border: 1px solid #555;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     color: #e0e0e0;
     transition: all 0.2s;
@@ -193,10 +200,10 @@ header h1 {
 }
 
 .simulation-indicator {
-    font-size: 12px;
+    font-size: 11px;
     color: #ff6b6b;
     background: rgba(255, 107, 107, 0.2);
-    padding: 6px 12px;
+    padding: 5px 10px;
     border-radius: 4px;
     display: none;
 }
@@ -211,7 +218,7 @@ header h1 {
     max-width: 800px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     flex-shrink: 0;
 }
 
@@ -224,15 +231,15 @@ header h1 {
 .scale-labels {
     display: flex;
     justify-content: space-between;
-    font-size: 12px;
+    font-size: 11px;
     color: #aaa;
 }
 
 /* Right Side: Controls */
 .control-section {
-    width: 400px;
+    width: 380px;
     background: #222;
-    padding: 16px;
+    padding: 12px;
     overflow-y: auto;
     flex-shrink: 0;
 }
@@ -241,14 +248,14 @@ header h1 {
     background: #2a2a2a;
     border: 1px solid #444;
     border-radius: 6px;
-    padding: 14px;
-    margin-bottom: 16px;
+    padding: 12px;
+    margin-bottom: 12px;
 }
 
 .control-group h3 {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     color: #4ecdc4;
 }
 
@@ -265,12 +272,12 @@ header h1 {
 
 .control-row button {
     flex: 1;
-    padding: 7px 12px;
+    padding: 6px 10px;
     background: #3a3a3a;
     border: 1px solid #555;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     color: #e0e0e0;
     transition: background 0.2s;
@@ -284,16 +291,16 @@ header h1 {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
 }
 
 .info-field label {
-    font-size: 11px;
+    font-size: 10px;
     color: #888;
 }
 
 .info-field span {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     color: #e0e0e0;
 }
@@ -302,7 +309,7 @@ header h1 {
 .network-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: 6px;
     margin-top: 8px;
 }
 
@@ -310,20 +317,20 @@ header h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 8px;
+    padding: 5px 7px;
     background: #1a1a1a;
     border: 1px solid #444;
     border-radius: 4px;
 }
 
 .network-item label {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     color: #aaa;
 }
 
 .network-item span {
-    font-size: 11px;
+    font-size: 10px;
     color: #e0e0e0;
 }
 
@@ -331,7 +338,7 @@ header h1 {
 .power-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: 6px;
     margin-top: 8px;
 }
 
@@ -339,26 +346,26 @@ header h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 8px;
+    padding: 5px 7px;
     background: #1a1a1a;
     border: 1px solid #444;
     border-radius: 4px;
 }
 
 .power-item label {
-    font-size: 10px;
+    font-size: 9px;
     color: #888;
 }
 
 .power-item span {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 500;
     color: #e0e0e0;
 }
 
 .status-indicator-small {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background: #444;
     flex-shrink: 0;
@@ -367,21 +374,21 @@ header h1 {
 /* Backplane Select */
 #backplaneSelect {
     flex: 1;
-    padding: 7px;
+    padding: 6px;
     border: 1px solid #555;
     border-radius: 4px;
-    font-size: 11px;
+    font-size: 10px;
     background: #1a1a1a;
     color: #e0e0e0;
 }
 
 /* Shutter Bar */
 .shutter-bar {
-    height: 20px;
+    height: 18px;
     background: #000;
     border: 1px solid #444;
     border-radius: 4px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 /* Tooltip */
@@ -417,7 +424,7 @@ header h1 {
 /* Responsive */
 @media (max-width: 1400px) {
     .control-section {
-        width: 350px;
+        width: 320px;
     }
 }
 
@@ -430,5 +437,10 @@ header h1 {
         width: 100%;
         border-right: none;
         border-top: 1px solid #333;
+        max-height: 300px;
+    }
+    
+    .camera-display-main canvas {
+        max-height: calc(100vh - 400px);
     }
 }
