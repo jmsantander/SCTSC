@@ -10,30 +10,38 @@
     <!-- External Libraries -->
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 </head>
 <body>
     <div class="main-container">
-        <!-- Header with tabs -->
-        <header class="header">
-            <div class="header-title">SCT Slow Control GUI</div>
-            <nav class="camera-tabs">
-                <button class="camera-tab-button active" onclick="switchCameraView('current')">Currents</button>
-                <button class="camera-tab-button" onclick="switchCameraView('voltage')">Voltages</button>
-                <button class="camera-tab-button" onclick="switchCameraView('temperature')">Temp</button>
-                <button class="camera-tab-button" onclick="switchCameraView('status')">Module States</button>
-            </nav>
+        <!-- Header -->
+        <header>
+            <h1>SCT Slow Control GUI</h1>
+            <div class="connection-status" id="connectionStatus">
+                <span class="status-indicator" id="statusIndicator"></span>
+                <span id="statusText">No connection</span>
+                <button class="header-button" onclick="sendCommand('initialize')">Initialize</button>
+                <button class="header-button danger" onclick="sendCommand('shutdown')">Shutdown</button>
+            </div>
         </header>
 
-        <!-- Main content area: camera on left, controls on right -->
-        <div class="content-area">
-            <!-- Left side: Camera display -->
+        <!-- Tab Navigation for Camera Views -->
+        <nav class="camera-tabs">
+            <button class="camera-tab-button active" onclick="switchCameraView('current')">Currents</button>
+            <button class="camera-tab-button" onclick="switchCameraView('voltage')">Voltages</button>
+            <button class="camera-tab-button" onclick="switchCameraView('presence')">Presence</button>
+            <button class="camera-tab-button" onclick="switchCameraView('temperature')">Temp</button>
+            <button class="camera-tab-button" onclick="switchCameraView('status')">Module States</button>
+        </nav>
+
+        <!-- Main Content: Camera Left, Controls Right -->
+        <div class="content-layout">
+            <!-- Left Side: Camera Display -->
             <div class="camera-section">
                 <div class="camera-display-main">
-                    <canvas id="cameraCanvas"></canvas>
+                    <canvas id="cameraCanvas" width="984" height="984"></canvas>
                     <div id="cameraTooltip" class="camera-tooltip" style="display: none;">
                         <div class="tooltip-row">
-                            <span class="tooltip-label">Module:</span>
+                            <span class="tooltip-label">Module ID:</span>
                             <span class="tooltip-value" id="tooltipModuleId">-</span>
                         </div>
                         <div class="tooltip-row">
@@ -47,9 +55,9 @@
                     </div>
                 </div>
                 
-                <!-- Color scale legend -->
-                <div class="color-scale-legend">
-                    <canvas id="tempScaleCanvas" width="400" height="30"></canvas>
+                <!-- Color Scale Legend -->
+                <div class="scale-legend">
+                    <canvas id="tempScaleCanvas" width="800" height="40"></canvas>
                     <div class="scale-labels">
                         <span id="scaleMin">0</span>
                         <span id="scaleMid">0.5</span>
@@ -58,139 +66,125 @@
                 </div>
             </div>
 
-            <!-- Right side: Control panels -->
-            <div class="controls-section">
-                <!-- Connection status -->
-                <div class="status-bar">
-                    <div class="status-item">
-                        <span class="status-indicator" id="statusIndicator"></span>
-                        <span id="statusText">No connection</span>
-                    </div>
-                    <button class="btn-small" onclick="sendCommand('initialize')">Initialize</button>
-                    <button class="btn-small btn-danger" onclick="sendCommand('shutdown')">Shutdown</button>
-                </div>
-
-                <!-- Fan controls -->
+            <!-- Right Side: Control Panel -->
+            <div class="control-section">
+                <!-- Fan Controls -->
                 <div class="control-group">
-                    <div class="control-header">
-                        <h3>Fan</h3>
-                        <span class="status-indicator"></span>
+                    <h3>Fan</h3>
+                    <div class="control-row">
+                        <button onclick="sendCommand('fans_on')">Fans ON</button>
+                        <button onclick="sendCommand('fans_off')">Fans OFF</button>
                     </div>
                     <div class="control-row">
-                        <div class="control-col">
+                        <div class="info-field">
                             <label>Voltage/V</label>
-                            <div class="value-display" id="fanVoltage">None</div>
+                            <span id="fanVoltage">None</span>
                         </div>
-                        <div class="control-col">
+                        <div class="info-field">
                             <label>Current/A</label>
-                            <div class="value-display" id="fanCurrent">None</div>
+                            <span id="fanCurrent">None</span>
                         </div>
-                    </div>
-                    <div class="button-row">
-                        <button class="btn" onclick="sendCommand('fans_on')">Fans ON</button>
-                        <button class="btn" onclick="sendCommand('fans_off')">Fans OFF</button>
-                        <button class="btn-text">None</button>
-                        <button class="btn-text">None</button>
                     </div>
                 </div>
 
-                <!-- Chiller -->
+                <!-- Chiller Controls -->
                 <div class="control-group">
-                    <div class="control-header">
-                        <h3>Chiller</h3>
-                    </div>
+                    <h3>Chiller</h3>
                     <div class="control-row">
-                        <div class="control-col">
+                        <div class="info-field">
                             <label>Pressure/Pa</label>
-                            <div class="value-display" id="chillerPressure">None</div>
+                            <span id="chillerPressure">None</span>
                         </div>
-                        <div class="control-col">
+                        <div class="info-field">
                             <label>Temperature/°F</label>
-                            <div class="value-display" id="chillerTemp">None</div>
+                            <span id="chillerTemp">None</span>
                         </div>
-                    </div>
-                    <div class="control-row">
-                        <div class="value-display">None</div>
-                        <div class="value-display">None</div>
                     </div>
                 </div>
 
                 <!-- Networks -->
                 <div class="control-group">
-                    <div class="control-header">
-                        <h3>Networks</h3>
-                        <button class="btn-small" onclick="checkNetworkActivity()">Check activity</button>
-                    </div>
+                    <h3>Networks</h3>
+                    <button onclick="checkNetworkActivity()">Check activity</button>
                     <div class="network-grid">
-                        <div class="network-item">None</div>
-                        <div class="network-item">None</div>
-                        <div class="network-item">ETH6</div>
-                        <div class="network-item">ETH7</div>
-                        <div class="network-item">None</div>
-                        <div class="network-item">None</div>
-                        <div class="network-item">ETH8</div>
-                        <div class="network-item">ETH9</div>
+                        <div class="network-item">
+                            <label>ETH6</label>
+                            <span id="eth6Status">None</span>
+                        </div>
+                        <div class="network-item">
+                            <label>ETH7</label>
+                            <span id="eth7Status">None</span>
+                        </div>
+                        <div class="network-item">
+                            <label>ETH8</label>
+                            <span id="eth8Status">None</span>
+                        </div>
+                        <div class="network-item">
+                            <label>ETH9</label>
+                            <span id="eth9Status">None</span>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Backplane -->
                 <div class="control-group">
-                    <div class="control-header">
-                        <h3>Backplane</h3>
-                    </div>
+                    <h3>Backplane</h3>
                     <div class="control-row">
-                        <select id="backplaneSelect" class="control-select">
-                            <option>backplane/reboot_daca_1</option>
+                        <select id="backplaneSelect">
+                            <option value="backplane/reboot_daca_1">backplane/reboot_daca_1</option>
                         </select>
-                        <button class="btn" onclick="backplaneAction()">Go</button>
+                        <button onclick="executeBackplaneCommand()">Go</button>
                     </div>
                 </div>
 
                 <!-- Camera Power -->
                 <div class="control-group">
-                    <div class="control-header">
-                        <h3>Camera Power</h3>
-                        <span class="status-indicator"></span>
+                    <h3>Camera Power</h3>
+                    <div class="control-row">
+                        <button onclick="sendCommand('power_on')">ON</button>
+                        <div class="status-indicator-small" id="powerStatusIndicator"></div>
+                        <button onclick="sendCommand('power_on_hv')">ON (w/ HV)</button>
+                        <button onclick="sendCommand('power_off')">OFF</button>
                     </div>
-                    <div class="button-row">
-                        <button class="btn" onclick="sendCommand('power_on')">ON</button>
-                        <button class="btn-text">ON (w/ HV)</button>
-                        <button class="btn" onclick="sendCommand('power_off')">OFF</button>
-                    </div>
-                    <div class="power-readings">
-                        <div class="reading-row">
-                            <span>Supply Current/A</span>
+                    <div class="power-grid">
+                        <div class="power-item">
+                            <label>Supply Current/A</label>
                             <span id="supplyCurrent">None</span>
-                            <span>HV Current/A</span>
+                        </div>
+                        <div class="power-item">
+                            <label>HV Current/A</label>
                             <span id="hvCurrent">None</span>
                         </div>
-                        <div class="reading-row">
-                            <span>Supply Nom Volts/V</span>
+                        <div class="power-item">
+                            <label>Supply Nom Volts/V</label>
                             <span id="supplyNomVolts">None</span>
-                            <span>HV Nom Volts/V</span>
+                        </div>
+                        <div class="power-item">
+                            <label>HV Nom Volts/V</label>
                             <span id="hvNomVolts">None</span>
                         </div>
-                        <div class="reading-row">
-                            <span>Supply Meas Volts/V</span>
+                        <div class="power-item">
+                            <label>Supply Meas Volts/V</label>
                             <span id="supplyMeasVolts">None</span>
-                            <span>HV Meas Volts/V</span>
+                        </div>
+                        <div class="power-item">
+                            <label>HV Meas Volts/V</label>
                             <span id="hvMeasVolts">None</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Shutter control -->
+                <!-- Shutter Control -->
                 <div class="control-group">
-                    <div class="control-header">
-                        <h3>Shutter control</h3>
+                    <h3>Shutter control</h3>
+                    <div class="shutter-bar"></div>
+                    <div class="control-row">
+                        <button onclick="sendCommand('shutter_open')">Open</button>
+                        <span id="shutterStatus">Motor is On</span>
                     </div>
-                    <div class="shutter-status">
-                        <div class="status-box">Motor is On</div>
-                        <div class="status-box">Shutter is closed</div>
-                    </div>
-                    <div class="button-row">
-                        <button class="btn" onclick="sendCommand('shutter_open')">Open</button>
-                        <button class="btn" onclick="sendCommand('shutter_close')">Close</button>
+                    <div class="control-row">
+                        <button onclick="sendCommand('shutter_close')">Close</button>
+                        <span id="shutterClosedStatus">Shutter is closed</span>
                     </div>
                 </div>
             </div>
