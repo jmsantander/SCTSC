@@ -57,13 +57,27 @@ function switchCameraView(viewType) {
     document.querySelectorAll('.camera-tab-button').forEach(btn => {
         btn.classList.remove('active');
     });
-    event.target.classList.add('active');
+    
+    // Find and activate the clicked button
+    const buttons = document.querySelectorAll('.camera-tab-button');
+    buttons.forEach(btn => {
+        const btnText = btn.textContent.toLowerCase();
+        if (
+            (viewType === 'current' && btnText.includes('current')) ||
+            (viewType === 'voltage' && btnText.includes('voltage')) ||
+            (viewType === 'presence' && btnText.includes('presence')) ||
+            (viewType === 'temperature' && btnText.includes('temp')) ||
+            (viewType === 'status' && btnText.includes('state'))
+        ) {
+            btn.classList.add('active');
+        }
+    });
     
     // Map view types to data types
     const dataTypeMap = {
         'current': 'current',
         'voltage': 'voltage',
-        'presence': 'status',  // Map presence to status
+        'presence': 'status',
         'temperature': 'temperature',
         'status': 'status'
     };
@@ -71,6 +85,40 @@ function switchCameraView(viewType) {
     // Update camera visualization
     if (window.cameraViz && window.cameraViz.initialized) {
         cameraViz.setDataType(dataTypeMap[viewType]);
+    }
+}
+
+/**
+ * Toggle simulation mode
+ */
+function toggleSimulation() {
+    if (!window.cameraViz) {
+        console.error('Camera visualization not initialized');
+        return;
+    }
+    
+    cameraViz.toggleSimulation();
+    
+    // Update UI
+    const btn = document.getElementById('simulationBtn');
+    const indicator = document.getElementById('simulationIndicator');
+    
+    if (cameraViz.simulationMode) {
+        if (btn) {
+            btn.textContent = 'Disable Simulation';
+            btn.classList.add('active');
+        }
+        if (indicator) {
+            indicator.classList.add('active');
+        }
+    } else {
+        if (btn) {
+            btn.textContent = 'Enable Simulation';
+            btn.classList.remove('active');
+        }
+        if (indicator) {
+            indicator.classList.remove('active');
+        }
     }
 }
 
