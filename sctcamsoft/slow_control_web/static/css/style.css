@@ -29,6 +29,7 @@ header {
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid #444;
+    flex-shrink: 0;
 }
 
 header h1 {
@@ -90,6 +91,7 @@ header h1 {
     background: #1a1a1a;
     padding: 4px 16px;
     border-bottom: 1px solid #444;
+    flex-shrink: 0;
 }
 
 .camera-tab-button {
@@ -123,6 +125,7 @@ header h1 {
     display: flex;
     flex: 1;
     overflow: hidden;
+    min-height: 0;
 }
 
 /* Left Side: Camera Display */
@@ -136,23 +139,26 @@ header h1 {
     justify-content: flex-start;
     overflow-y: auto;
     border-right: 1px solid #333;
+    min-width: 0;
 }
 
 .camera-display-main {
     position: relative;
     margin-bottom: 20px;
     width: 100%;
-    max-width: 900px;
+    max-width: 100%;
     display: flex;
     justify-content: center;
+    align-items: center;
 }
 
 .camera-display-main canvas {
     border: 2px solid #4ecdc4;
     display: block;
-    width: 100%;
-    height: auto;
-    max-width: 100%;
+    /* Make canvas responsive - key change */
+    width: 100% !important;
+    height: auto !important;
+    max-width: 800px;
 }
 
 /* Simulation Controls */
@@ -161,6 +167,7 @@ header h1 {
     display: flex;
     gap: 12px;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .simulation-button {
@@ -201,10 +208,11 @@ header h1 {
 /* Scale Legend */
 .scale-legend {
     width: 100%;
-    max-width: 900px;
+    max-width: 800px;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .scale-legend canvas {
@@ -226,6 +234,7 @@ header h1 {
     background: #222;
     padding: 16px;
     overflow-y: auto;
+    flex-shrink: 0;
 }
 
 .control-group {
