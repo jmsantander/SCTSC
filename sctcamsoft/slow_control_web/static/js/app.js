@@ -123,6 +123,21 @@ function toggleSimulation() {
 }
 
 /**
+ * Change colormap
+ */
+function changeColormap() {
+    if (!window.cameraViz) {
+        console.error('Camera visualization not initialized');
+        return;
+    }
+    
+    const select = document.getElementById('colormapSelect');
+    if (select) {
+        cameraViz.setColorScale(select.value);
+    }
+}
+
+/**
  * Update connection status indicator
  */
 function updateConnectionStatus(connected) {
