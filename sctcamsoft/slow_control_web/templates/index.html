@@ -37,8 +37,16 @@
         <div class="content-layout">
             <!-- Left Side: Camera Display -->
             <div class="camera-section">
+                <!-- Simulation Controls -->
+                <div class="simulation-controls">
+                    <button class="simulation-button" id="simulationBtn" onclick="toggleSimulation()">
+                        Enable Simulation
+                    </button>
+                    <span class="simulation-indicator" id="simulationIndicator">SIMULATION MODE</span>
+                </div>
+
                 <div class="camera-display-main">
-                    <canvas id="cameraCanvas" width="984" height="984"></canvas>
+                    <canvas id="cameraCanvas"></canvas>
                     <div id="cameraTooltip" class="camera-tooltip" style="display: none;">
                         <div class="tooltip-row">
                             <span class="tooltip-label">Module ID:</span>
